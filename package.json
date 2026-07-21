@@ -1,0 +1,19 @@
+{
+  "name": "amr-monitoring-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AMR monitoring dashboard backed by the IOT2020 DWS schema.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check src/db.js && node --check src/dashboard-service.js && node --check public/app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "mssql": "^12.7.0"
+  }
+}
