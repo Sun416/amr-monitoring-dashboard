@@ -97,5 +97,6 @@
 - 已安装 `DWS.etl_freshness_log`、`DWS.v_etl_freshness_latest` 和 `DWS.sp_check_etl_freshness`。
 - 手动检查入口：`48_run_etl_freshness_check.sql`。
 - Agent 新鲜度任务草案：`49_create_sql_server_agent_freshness_job.sql`，当前因 msdb Agent 角色未授权而不能安装。
-- 首次检查的 12 条核心链路均为 `STALE`；其中 dbo 到 ODS 四张历史表约落后 55 万个 ID，ODS/DWD/DWS 历史锚点仍停在 2026-07-17。
-- `estimated_rows_behind` 是最大 ID 与目标水位线之差，用于快速告警，不等同于精确缺失行数。
+- 首次检查的 12 条核心链路均为 `STALE`；当时 dbo 到 ODS 四张历史表约落后 55 万个 ID，历史锚点停在 2026-07-17。
+- 2026-07-22 已手动执行全层同步，耗时约 6 分 15 秒；随后 12 条监控链路全部恢复为 `SUCCESS`。
+- `estimated_rows_behind` 是最大 ID 与目标水位线之差，不等同于精确缺失行数。持续写入时允许存在少量 ID 差；只有事件时间延迟超过分层阈值才判为 `STALE`。

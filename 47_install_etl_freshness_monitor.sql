@@ -314,11 +314,8 @@ BEGIN
             N'DWS', N'dws_robot_battery_hourly',
             (SELECT MAX([battery_fact_id]) FROM [DWD].[fact_robot_battery]),
             (SELECT MAX([source_max_fact_id]) FROM [DWS].[dws_robot_battery_hourly]),
-            (SELECT TOP (1) [sample_time] FROM [DWD].[fact_robot_battery] ORDER BY [battery_fact_id] DESC),
-            (SELECT TOP (1) f.[sample_time]
-             FROM [DWD].[fact_robot_battery] AS f
-             WHERE f.[battery_fact_id] =
-             (SELECT MAX([source_max_fact_id]) FROM [DWS].[dws_robot_battery_hourly])),
+            (SELECT TOP (1) [pc_timestamp] FROM [ODS].[robot_battery_history] ORDER BY [ods_row_id] DESC),
+            (SELECT MAX([last_sample_time]) FROM [DWS].[dws_robot_battery_hourly]),
             @dws_threshold_minutes
         UNION ALL
         SELECT
@@ -326,11 +323,8 @@ BEGIN
             N'DWS', N'dws_robot_job_daily',
             (SELECT MAX([job_fact_id]) FROM [DWD].[fact_robot_job]),
             (SELECT MAX([source_max_fact_id]) FROM [DWS].[dws_robot_job_daily]),
-            (SELECT TOP (1) [job_start_time] FROM [DWD].[fact_robot_job] ORDER BY [job_fact_id] DESC),
-            (SELECT TOP (1) f.[job_start_time]
-             FROM [DWD].[fact_robot_job] AS f
-             WHERE f.[job_fact_id] =
-             (SELECT MAX([source_max_fact_id]) FROM [DWS].[dws_robot_job_daily])),
+            (SELECT TOP (1) [pc_timestamp] FROM [ODS].[robot_job_history] ORDER BY [ods_row_id] DESC),
+            (SELECT MAX([last_job_start_time]) FROM [DWS].[dws_robot_job_daily]),
             @dws_threshold_minutes
         UNION ALL
         SELECT
@@ -338,11 +332,8 @@ BEGIN
             N'DWS', N'dws_robot_status_hourly',
             (SELECT MAX([status_fact_id]) FROM [DWD].[fact_robot_status]),
             (SELECT MAX([source_max_fact_id]) FROM [DWS].[dws_robot_status_hourly]),
-            (SELECT TOP (1) [status_time] FROM [DWD].[fact_robot_status] ORDER BY [status_fact_id] DESC),
-            (SELECT TOP (1) f.[status_time]
-             FROM [DWD].[fact_robot_status] AS f
-             WHERE f.[status_fact_id] =
-             (SELECT MAX([source_max_fact_id]) FROM [DWS].[dws_robot_status_hourly])),
+            (SELECT TOP (1) [pc_timestamp] FROM [ODS].[robot_status_history] ORDER BY [ods_row_id] DESC),
+            (SELECT MAX([last_status_time]) FROM [DWS].[dws_robot_status_hourly]),
             @dws_threshold_minutes
         UNION ALL
         SELECT
@@ -350,11 +341,8 @@ BEGIN
             N'DWS', N'dws_robot_wifi_hourly',
             (SELECT MAX([wifi_fact_id]) FROM [DWD].[fact_robot_wifi]),
             (SELECT MAX([source_max_fact_id]) FROM [DWS].[dws_robot_wifi_hourly]),
-            (SELECT TOP (1) [sample_time] FROM [DWD].[fact_robot_wifi] ORDER BY [wifi_fact_id] DESC),
-            (SELECT TOP (1) f.[sample_time]
-             FROM [DWD].[fact_robot_wifi] AS f
-             WHERE f.[wifi_fact_id] =
-             (SELECT MAX([source_max_fact_id]) FROM [DWS].[dws_robot_wifi_hourly])),
+            (SELECT TOP (1) [pc_timestamp] FROM [ODS].[robot_wifi_history] ORDER BY [ods_row_id] DESC),
+            (SELECT MAX([last_sample_time]) FROM [DWS].[dws_robot_wifi_hourly]),
             @dws_threshold_minutes;
 
         ;WITH calculated AS
@@ -403,7 +391,6 @@ BEGIN
                     WHEN c.[target_watermark] > c.[source_max_id] THEN N'FAILED'
                     WHEN c.[source_max_time] IS NULL THEN N'FAILED'
                     WHEN c.[target_max_time] IS NULL THEN N'FAILED'
-                    WHEN c.[estimated_rows_behind] > 0 THEN N'STALE'
                     WHEN c.[freshness_minutes] > c.[threshold_minutes] THEN N'STALE'
                     WHEN c.[source_age_minutes] > c.[threshold_minutes] THEN N'STALE'
                     ELSE N'SUCCESS'
@@ -414,9 +401,9 @@ BEGIN
                     WHEN c.[target_watermark] > c.[source_max_id] THEN N'Target watermark is greater than the source maximum ID.'
                     WHEN c.[source_max_time] IS NULL THEN N'Source event time is unavailable.'
                     WHEN c.[target_max_time] IS NULL THEN N'Target event time is unavailable.'
-                    WHEN c.[estimated_rows_behind] > 0 THEN N'Target watermark is behind the source maximum ID.'
                     WHEN c.[freshness_minutes] > c.[threshold_minutes] THEN N'Target event time is behind the source event time.'
                     WHEN c.[source_age_minutes] > c.[threshold_minutes] THEN N'Source data is older than the configured threshold.'
+                    WHEN c.[estimated_rows_behind] > 0 THEN N'Target has a small ID gap, but event-time freshness is within the configured threshold.'
                     ELSE N'Source and target watermarks are within the configured threshold.'
                 END AS [status_detail]
             FROM calculated AS c
