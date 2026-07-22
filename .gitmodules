@@ -1,0 +1,3 @@
+[submodule "amr-monitoring-web"]
+	path = amr-monitoring-web
+	url = https://github.com/Sun416/amr-monitoring-dashboard.git
