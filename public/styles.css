@@ -382,9 +382,9 @@ td small { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1
 .status-pill.online, .risk-pill { background: var(--green-light); color: #027a48; }
 .status-pill.offline, .status-pill.alarm, .risk-pill.critical { background: var(--red-light); color: #b42318; }
 .status-pill.unknown, .risk-pill.warning { background: var(--amber-light); color: #b54708; }
-.battery-low, .zero-high, .wifi-stale { color: var(--red); }
+.battery-low, .zero-high, .wifi-stale, .data-stale { color: var(--red); }
 .battery-mid, .zero-mid { color: var(--amber); }
-.battery-ok, .zero-low, .wifi-current { color: var(--green); }
+.battery-ok, .zero-low, .wifi-current, .data-current { color: var(--green); }
 .batch-success, .batch-completed { color: var(--green); font-weight: 700; }
 .batch-failed, .batch-error { color: var(--red); font-weight: 700; }
 

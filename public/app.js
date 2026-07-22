@@ -107,6 +107,17 @@ function formatShortTime(value) {
   }).format(date);
 }
 
+function dataTimeClass(value) {
+  if (!value) return 'data-stale';
+  const dataTime = new Date(value);
+  const referenceTime = new Date(state.dashboard?.summary?.database_current_time || state.dashboard?.generatedAt || Date.now());
+  if (Number.isNaN(dataTime.getTime()) || Number.isNaN(referenceTime.getTime())) return 'data-stale';
+  const staleMinutes = asNumber(state.dashboard?.staleMinutes, 5);
+  return referenceTime.getTime() - dataTime.getTime() <= staleMinutes * 60 * 1000
+    ? 'data-current'
+    : 'data-stale';
+}
+
 function updateClock() {
   const now = new Date();
   elements.currentDate.textContent = new Intl.DateTimeFormat('en-GB', {
@@ -598,10 +609,10 @@ function renderRobotVitals(robots) {
     row.insertCell().textContent = robotPoiSummary(robot);
 
     const timeCell = row.insertCell();
-    timeCell.className = normalizedOnlineStatus(robot.online_status) === 'online' ? 'wifi-current' : 'wifi-stale';
-    timeCell.textContent = `Status ${formatDateTime(robot.status_event_time || robot.source_event_time)}`;
+    timeCell.className = dataTimeClass(robot.latest_data_time);
+    timeCell.textContent = formatDateTime(robot.latest_data_time);
     const freshness = document.createElement('small');
-    freshness.textContent = `Battery ${formatDateTime(robot.battery_event_time)} · WiFi ${formatDateTime(robot.latest_wifi_time)}`;
+    freshness.textContent = 'Latest of status, battery and WiFi';
     timeCell.append(freshness);
   });
 }
@@ -1199,7 +1210,9 @@ function buildExportRows(dataset) {
         Alarm_Code: robot.error_code,
         Alarm_Reason: robot.error_message,
         Derived_Alert_Causes: robotAlertCauses(robot).map((cause) => cause.reason).join('; '),
+        Latest_Data_Time: robot.latest_data_time,
         Status_Data_Time: robot.status_event_time || robot.source_event_time,
+        Battery_Data_Time: robot.battery_event_time,
         WiFi_Data_Time: robot.latest_wifi_time
       }));
     case 'map':

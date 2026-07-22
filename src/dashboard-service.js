@@ -16,6 +16,19 @@ function normalizeWindow(hours, days) {
   };
 }
 
+function latestDateTime(values) {
+  let latest = null;
+
+  values.forEach((value) => {
+    if (!value) return;
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return;
+    if (!latest || date > latest) latest = date;
+  });
+
+  return latest;
+}
+
 async function loadDashboard({ hours, days } = {}) {
   const window = normalizeWindow(hours, days);
   const onlineAnchorMinutes = parseInteger(process.env.ONLINE_ANCHOR_MINUTES, 5, 1, 120);
@@ -40,10 +53,21 @@ async function loadDashboard({ hours, days } = {}) {
   const wifiByMasterId = new Map(
     (wifiSets[1] || []).map((row) => [String(row.master_robot_id), row])
   );
-  const robots = (sets[1] || []).map((robot) => ({
-    ...robot,
-    ...(wifiByMasterId.get(String(robot.master_robot_id)) || {})
-  }));
+  const robots = (sets[1] || []).map((robot) => {
+    const mergedRobot = {
+      ...robot,
+      ...(wifiByMasterId.get(String(robot.master_robot_id)) || {})
+    };
+
+    return {
+      ...mergedRobot,
+      latest_data_time: latestDateTime([
+        mergedRobot.status_event_time || mergedRobot.source_event_time,
+        mergedRobot.battery_event_time,
+        mergedRobot.latest_wifi_time
+      ])
+    };
+  });
 
   return {
     generatedAt: new Date().toISOString(),
