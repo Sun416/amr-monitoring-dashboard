@@ -89,3 +89,13 @@
 - 大表回补要分批，评估日志、锁、磁盘和中断恢复。
 - 使用显式列、显式 JOIN、Schema 限定名；不要用 `DISTINCT` 掩盖错误关联。
 - 当前数据库/权限/行数/时间属于易变状态，执行写操作前必须重新只读验证。
+
+## 8. 2026-07-22 工程基线与新鲜度监控
+
+- Git 根仓库基线提交：`ed55c12`；Web 子仓库基线提交：`29ea933`。
+- Web 目录作为正式 Git 子模块记录，远端为 `https://github.com/Sun416/amr-monitoring-dashboard.git`。
+- 已安装 `DWS.etl_freshness_log`、`DWS.v_etl_freshness_latest` 和 `DWS.sp_check_etl_freshness`。
+- 手动检查入口：`48_run_etl_freshness_check.sql`。
+- Agent 新鲜度任务草案：`49_create_sql_server_agent_freshness_job.sql`，当前因 msdb Agent 角色未授权而不能安装。
+- 首次检查的 12 条核心链路均为 `STALE`；其中 dbo 到 ODS 四张历史表约落后 55 万个 ID，ODS/DWD/DWS 历史锚点仍停在 2026-07-17。
+- `estimated_rows_behind` 是最大 ID 与目标水位线之差，用于快速告警，不等同于精确缺失行数。
