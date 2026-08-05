@@ -126,7 +126,7 @@ JOIN [ODS].[AMR_Queue] AS src
 WHERE tgt.[source_schema] = N''ODS''
   AND tgt.[source_table] = N''AMR_Queue''
   AND (tgt.[event_time] IS NULL OR tgt.[queue_start_time] IS NULL)
-  AND TRY_CONVERT(DATETIME2(3), src.[enqueued_at]) IS NOT NULL;
+  AND TRY_CONVERT(DATETIME2(3), SWITCHOFFSET(TRY_CONVERT(DATETIMEOFFSET(7), src.[enqueued_at]), N''+07:00'')) IS NOT NULL;
 ';
 END;
 GO
@@ -139,15 +139,15 @@ BEGIN
     EXEC sys.sp_executesql N'
 UPDATE tgt
 SET
-    [event_time] = COALESCE(tgt.[event_time], TRY_CONVERT(DATETIME2(3), src.[enqueued_at])),
-    [queue_start_time] = COALESCE(tgt.[queue_start_time], TRY_CONVERT(DATETIME2(3), src.[enqueued_at]))
+    [event_time] = COALESCE(tgt.[event_time], TRY_CONVERT(DATETIME2(3), SWITCHOFFSET(TRY_CONVERT(DATETIMEOFFSET(7), src.[enqueued_at]), N''+07:00''))),
+    [queue_start_time] = COALESCE(tgt.[queue_start_time], TRY_CONVERT(DATETIME2(3), SWITCHOFFSET(TRY_CONVERT(DATETIMEOFFSET(7), src.[enqueued_at]), N''+07:00'')))
 FROM [DWD].[fact_amr_queue] AS tgt
 JOIN [ODS].[AMR_Queue] AS src
     ON src.[ods_row_id] = tgt.[source_ods_row_id]
 WHERE tgt.[source_schema] = N''ODS''
   AND tgt.[source_table] = N''AMR_Queue''
   AND (tgt.[event_time] IS NULL OR tgt.[queue_start_time] IS NULL)
-  AND TRY_CONVERT(DATETIME2(3), src.[enqueued_at]) IS NOT NULL;
+  AND TRY_CONVERT(DATETIME2(3), SWITCHOFFSET(TRY_CONVERT(DATETIMEOFFSET(7), src.[enqueued_at]), N''+07:00'')) IS NOT NULL;
 ';
 END;
 GO

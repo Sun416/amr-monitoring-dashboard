@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>AMR Operations Analytics</title>
+  <link rel="stylesheet" href="/styles.css?v=20260722-13">
+</head>
+<body>
+  <div class="workspace">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">A</div>
+        <div><strong>AMR Analytics</strong><span>IOT2020 Data Center</span></div>
+      </div>
+
+      <nav class="directory" aria-label="Analytics directory">
+        <p class="directory-label">Analytics Directory</p>
+        <button class="nav-item active" type="button" data-view="overview">
+          <span class="nav-index">01</span><span><strong>Overview</strong><small>Key metrics and entry points</small></span>
+        </button>
+        <button class="nav-item" type="button" data-view="operations">
+          <span class="nav-index">02</span><span><strong>Operations</strong><small>Status, mode and position</small></span>
+        </button>
+        <button class="nav-item" type="button" data-view="tasks">
+          <span class="nav-index">03</span><span><strong>Task Analytics</strong><small>Tasks, queues and snapshots</small></span>
+        </button>
+        <button class="nav-item" type="button" data-view="energy">
+          <span class="nav-index">04</span><span><strong>Energy</strong><small>Battery level and low-battery risk</small></span>
+        </button>
+        <button class="nav-item" type="button" data-view="network">
+          <span class="nav-index">05</span><span><strong>Network Quality</strong><small>RSSI and access-point risk</small></span>
+        </button>
+        <button class="nav-item" type="button" data-view="alarms">
+          <span class="nav-index">06</span><span><strong>Robot Alert Causes</strong><small>Delayed data, low battery, signal loss and device errors</small></span>
+        </button>
+        <button class="nav-item" type="button" data-view="robots">
+          <span class="nav-index">07</span><span><strong>Robot Details</strong><small>Robot-level operational data</small></span>
+        </button>
+        <button class="nav-item" type="button" data-view="robot-profile">
+          <span class="nav-index">08</span><span><strong>Robot Profile</strong><small>One robot's complete status</small></span>
+        </button>
+        <button class="nav-item" type="button" data-view="data-quality">
+          <span class="nav-index">09</span><span><strong>Data Quality</strong><small>Freshness and load batches</small></span>
+        </button>
+      </nav>
+
+      <div class="sidebar-status">
+        <div class="status-heading"><span class="status-dot" id="freshnessDot"></span><strong>Data Connection</strong></div>
+        <p id="connectionStatus">Connecting to DWS...</p>
+        <div><span>Analysis Window</span><strong id="analysisWindowLabel">Last 1 day</strong></div>
+      </div>
+    </aside>
+
+    <button class="sidebar-overlay" id="sidebarOverlay" type="button" aria-label="Close analytics directory"></button>
+
+    <div class="app-area">
+      <header class="app-header">
+        <div class="page-title-group">
+          <button class="menu-button" id="sidebarToggle" type="button" aria-label="Open analytics directory" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
+          <div><p id="viewEyebrow">01 · OVERVIEW</p><h1 id="viewTitle">Overview</h1><span id="viewDescription">Review fleet health first, then open a focused analysis view.</span></div>
+        </div>
+
+        <div class="header-controls">
+          <div class="clock-block"><span id="currentDate">--</span><strong id="currentTime">--:--:--</strong></div>
+          <label class="range-control" for="rangeSelect">
+            <span>Time Range</span>
+            <select id="rangeSelect">
+              <option value="h3" data-hours="3" data-days="1">Last 3 hours</option>
+              <option value="h6" data-hours="6" data-days="1">Last 6 hours</option>
+              <option value="h12" data-hours="12" data-days="1">Last 12 hours</option>
+              <option value="d1" data-hours="24" data-days="1" selected>Last 1 day</option>
+              <option value="d7" data-hours="168" data-days="7">Last 1 week</option>
+              <option value="d30" data-hours="720" data-days="30">Last 30 days</option>
+            </select>
+          </label>
+          <button class="button secondary" id="refreshButton" type="button">Refresh</button>
+          <button class="button secondary" id="syncButton" type="button">Sync Status</button>
+          <button class="button primary" id="exportAllButton" type="button">Download All</button>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="view-panel active" data-view-panel="overview" aria-labelledby="overviewHeading">
+          <div class="section-intro">
+            <div><span class="section-kicker">FLEET OVERVIEW</span><h2 id="overviewHeading">Fleet Key Metrics</h2><p>The highest-priority metrics from the current snapshot and selected time range.</p></div>
+            <button class="download-button" type="button" data-export="overview">Download Page CSV</button>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card" data-tone="blue"><div class="metric-top"><span>Enabled Robots</span><b>01</b></div><strong id="metricTotal">--</strong><small id="metricTotalScope">Enabled fleet</small></article>
+            <article class="metric-card" data-tone="green"><div class="metric-top"><span>Recently Online</span><b>02</b></div><strong id="metricOnline">--</strong><small id="metricOffline">Based on the status anchor</small></article>
+            <article class="metric-card" data-tone="indigo"><div class="metric-top"><span>Active Jobs</span><b>03</b></div><strong id="metricJobs">--</strong><small id="metricJobScope">Working / Running</small></article>
+            <article class="metric-card" data-tone="teal"><div class="metric-top"><span>Task Success Rate</span><b>04</b></div><strong id="metricTaskSuccess">--</strong><small id="metricTaskSuccessScope">Completed vs. failed states</small></article>
+            <article class="metric-card" data-tone="amber"><div class="metric-top"><span>Average Battery</span><b>05</b></div><strong id="metricBattery">--</strong><small id="metricLowBattery">Low battery ≤20%: --</small></article>
+            <article class="metric-card" data-tone="violet"><div class="metric-top"><span>Current Average RSSI</span><b>06</b></div><strong id="metricRssi">--</strong><small id="metricWifiCoverage">Reported recently: -- robots</small></article>
+            <article class="metric-card" data-tone="orange"><div class="metric-top"><span>Zero-Signal Rate</span><b>07</b></div><strong id="metricZeroSignal">--</strong><small id="metricZeroSignalScope">WiFi samples where signal = 0</small></article>
+            <article class="metric-card" data-tone="red"><div class="metric-top"><span>Robot Alerts</span><b>08</b></div><strong id="metricAlarms">--</strong><small id="metricAlarmScope">Delayed data, low battery, signal loss or device error</small></article>
+          </div>
+
+          <div class="overview-block">
+            <div class="section-intro compact"><div><span class="section-kicker">DIRECTORY</span><h2>Open Analysis by Question</h2><p>Each topic has its own ordered view, keeping summary metrics separate from operational details.</p></div></div>
+            <div class="directory-cards">
+              <button type="button" data-go-view="operations"><span>02</span><strong>What state is each robot in?</strong><small>Review online state, operating mode and position.</small></button>
+              <button type="button" data-go-view="tasks"><span>03</span><strong>How are tasks performing?</strong><small>Review success rate, task volume and queues.</small></button>
+              <button type="button" data-go-view="energy"><span>04</span><strong>Which robots are at low-battery risk?</strong><small>See exact robot IDs, battery level and charging state.</small></button>
+              <button type="button" data-go-view="network"><span>05</span><strong>Is wireless coverage stable?</strong><small>Review RSSI, zero-signal rate and access-point risk.</small></button>
+              <button type="button" data-go-view="alarms"><span>06</span><strong>Why are robots alarming?</strong><small>See each reason and the affected robot IDs.</small></button>
+              <button type="button" data-go-view="robots"><span>07</span><strong>Look up one robot</strong><small>Search status, task, battery and network details.</small></button>
+              <button type="button" data-go-view="robot-profile"><span>08</span><strong>What is happening with one robot?</strong><small>Select one Robot ID and review its complete current and historical status.</small></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="view-panel" data-view-panel="operations" aria-labelledby="operationsHeading">
+          <div class="section-intro"><div><span class="section-kicker">OPERATIONS</span><h2 id="operationsHeading">Operating Status</h2><p>Monitor the fleet through status distribution, operating mode and position.</p></div></div>
+          <div class="focus-strip">
+            <div><span>Recently Online</span><strong id="operationsOnlineValue">--</strong><small>Within the status reporting threshold</small></div>
+            <div><span>Timed Out / Offline</span><strong id="operationsOfflineValue">--</strong><small id="operationsOfflineIds">IDs: --</small></div>
+            <div><span>Active Jobs</span><strong id="operationsActiveValue">--</strong><small id="operationsActiveIds">IDs: --</small></div>
+          </div>
+          <div class="two-column-grid">
+            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">STATUS</span><h3>Operating Status Distribution</h3><p>Latest status snapshot for every enabled robot</p></div><button class="download-button compact" type="button" data-export="status-distribution">Download CSV</button></header><div id="statusDistribution" class="distribution-list empty-state">Waiting for data</div></article>
+            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">MODE</span><h3>Operating Mode Distribution</h3><p>Latest mode dictionary mapping</p></div><button class="download-button compact" type="button" data-export="mode-distribution">Download CSV</button></header><div id="modeDistribution" class="mini-bars empty-state">Waiting for data</div></article>
+          </div>
+          <article class="panel map-panel">
+            <header class="panel-header map-panel-header"><div><span class="panel-kicker">POSITION</span><h3>Robot Position Projection</h3><p>Relative robot positions within the selected map</p></div><div class="panel-tools"><select id="mapSelect" class="map-select" aria-label="Select robot map"><option value="">Waiting for map data</option></select><button class="download-button compact" type="button" data-export="map">Download CSV</button></div></header>
+            <div class="map-stage" id="mapStage">
+              <svg id="robotMap" viewBox="0 0 1000 600" preserveAspectRatio="none" role="img" aria-label="Current robot position projection">
+                <defs><pattern id="smallGrid" width="25" height="25" patternUnits="userSpaceOnUse"><path d="M 25 0 L 0 0 0 25" fill="none" stroke="rgba(37,99,235,.08)" stroke-width="1" /></pattern><filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <rect width="1000" height="600" fill="url(#smallGrid)" />
+                <g class="factory-zones" aria-hidden="true"><rect x="65" y="75" width="250" height="170" rx="8"/><text x="85" y="105">ZONE A</text><rect x="365" y="75" width="250" height="170" rx="8"/><text x="385" y="105">ZONE B</text><rect x="665" y="75" width="270" height="170" rx="8"/><text x="685" y="105">ZONE C</text><rect x="65" y="335" width="375" height="190" rx="8"/><text x="85" y="365">LOGISTICS</text><rect x="500" y="335" width="435" height="190" rx="8"/><text x="520" y="365">PRODUCTION</text></g>
+                <g id="robotMapLayer"></g>
+              </svg>
+              <div id="mapEmpty" class="map-empty">No coordinates are available for this map</div>
+              <div class="map-note">Normalized projection for relative position analysis only</div>
+            </div>
+            <footer class="map-footer"><span>Robots with Coordinates <strong id="mappedRobotCount">0</strong></span><span>Maps <strong id="mapCodeCount">0</strong></span><span>Selected Robot <strong id="selectedRobot">--</strong></span></footer>
+          </article>
+        </section>
+
+        <section class="view-panel" data-view-panel="tasks" aria-labelledby="tasksHeading">
+          <div class="section-intro"><div><span class="section-kicker">TASKS</span><h2 id="tasksHeading">Task Analytics</h2><p>Review success and volume first, then inspect each robot's current task.</p></div></div>
+          <div class="focus-strip four-column"><div><span>Task Success Rate</span><strong id="taskSuccessValue">--</strong><small>Completed / (completed + unsuccessful)</small></div><div><span>Recorded Failures</span><strong id="taskFailureValue">--</strong><small id="taskFailureSummary">Queue outcome status</small></div><div><span>Active Jobs</span><strong id="taskActiveValue">--</strong><small id="taskActiveIds">IDs: --</small></div><div><span>Root-Cause Field</span><strong class="compact-value">Not Available</strong><small>The source records outcome status only</small></div></div>
+          <div class="two-column-grid">
+            <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">TASK VOLUME</span><h3>Task Volume Trend</h3><p>Completed and failed counts remain available in the export</p></div><button class="download-button compact" type="button" data-export="job-trend">Download CSV</button></header><div id="jobChart" class="chart-host"></div></article>
+            <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">QUEUE</span><h3>Queue Volume Trend</h3><p>The export includes completed, failed and average duration</p></div><button class="download-button compact" type="button" data-export="queue-trend">Download CSV</button></header><div id="queueChart" class="chart-host"></div></article>
+          </div>
+          <article class="panel actionable-panel task-failure-panel"><header class="panel-header"><div><span class="panel-kicker">FAILURE FOLLOW-UP</span><h3>Recorded Failure Outcomes</h3><p>Shows terminal queue outcomes and affected robots. The source does not contain the underlying root cause.</p></div><button class="download-button compact" type="button" data-export="task-failure-outcomes">Download CSV</button></header><div class="table-scroll"><table class="failure-outcome-table"><thead><tr><th>Recorded Outcome</th><th>Failed Tasks</th><th>Affected Robots</th><th>Robot IDs</th><th>Latest Failure</th></tr></thead><tbody id="taskFailureBody"><tr><td colspan="5" class="empty-cell">Waiting for data</td></tr></tbody></table></div></article>
+          <article class="panel"><header class="panel-header"><div><span class="panel-kicker">TASK SNAPSHOT</span><h3>Current Task Status</h3><p>Sorted by active job, online state and robot ID</p></div><button class="download-button compact" type="button" data-export="tasks">Download CSV</button></header><div class="table-scroll"><table class="compact-table task-status-table"><thead><tr><th>Robot ID</th><th>Task / Position</th><th>Status</th><th>Mode</th></tr></thead><tbody id="taskTableBody"><tr><td colspan="4" class="empty-cell">Waiting for data</td></tr></tbody></table></div></article>
+        </section>
+
+        <section class="view-panel" data-view-panel="energy" aria-labelledby="energyHeading">
+          <div class="section-intro"><div><span class="section-kicker">ENERGY</span><h2 id="energyHeading">Energy Analytics</h2><p>Identify the exact robots at low-battery risk and review the fleet-level trend.</p></div></div>
+          <div class="focus-strip"><div><span>Average Battery</span><strong id="energyAverageValue">--</strong><small>Current robot snapshot</small></div><div><span>Low Battery ≤20%</span><strong id="energyLowBatteryValue">--</strong><small id="energyLowBatteryIds">IDs: --</small></div><div><span>Trend Through</span><strong id="batteryTrendAnchor">--</strong><small>DWS hourly rollup</small></div></div>
+          <article class="panel actionable-panel"><header class="panel-header"><div><span class="panel-kicker">ACTION REQUIRED</span><h3>Low-Battery Robot Details</h3><p>Robots with a current battery snapshot between 0% and 20%</p></div><button class="download-button compact" type="button" data-export="low-battery-risk">Download CSV</button></header><div class="table-scroll"><table class="actionable-table"><thead><tr><th>Robot ID</th><th>Battery</th><th>Operating Status</th><th>Charging</th><th>Current / Target POI</th><th>Last Battery Update</th></tr></thead><tbody id="lowBatteryRiskBody"><tr><td colspan="6" class="empty-cell">Waiting for data</td></tr></tbody></table></div></article>
+          <article class="panel chart-panel wide-chart"><header class="panel-header"><div><span class="panel-kicker">BATTERY TREND</span><h3>Average Battery Trend</h3><p>Hourly weighted fleet average with a fixed 0%–100% scale</p></div><button class="download-button compact" type="button" data-export="battery-trend">Download CSV</button></header><div id="batteryChart" class="chart-host"></div></article>
+          <aside class="method-note"><strong>Metric Definition</strong><span>Low-battery robots are counted from the current snapshot when battery is between 0% and 20%. The trend uses the DWS hourly aggregate.</span></aside>
+        </section>
+
+        <section class="view-panel" data-view-panel="network" aria-labelledby="networkHeading">
+          <div class="section-intro"><div><span class="section-kicker">NETWORK</span><h2 id="networkHeading">Network Quality</h2><p>Assess wireless coverage with valid RSSI, zero-signal rate and access-point risk.</p></div></div>
+          <div class="focus-strip"><div><span>Current Average RSSI</span><strong id="networkRssiValue">--</strong><small>Valid recent signal values</small></div><div><span>Zero-Signal Rate</span><strong id="networkZeroValue">--</strong><small>Signal = 0 samples / all samples</small></div><div><span>Recent Reporting Coverage</span><strong id="networkCoverageValue">--</strong><small id="networkStaleIds">Not current: --</small></div></div>
+          <article class="panel chart-panel wide-chart"><header class="panel-header"><div><span class="panel-kicker">RSSI TREND</span><h3>WiFi Signal Trend</h3><p>Hourly average of valid RSSI; signal = 0 samples are excluded from the average</p></div><button class="download-button compact" type="button" data-export="wifi-trend">Download CSV</button></header><div id="wifiChart" class="chart-host"></div></article>
+          <article class="panel"><header class="panel-header"><div><span class="panel-kicker">ACCESS POINT RISK</span><h3>Wireless Access-Point Risk</h3><p>Only access points meeting the minimum sample threshold are shown</p></div><div class="panel-tools"><span class="source-chip" id="wifiWindowLabel">Last 24 hours</span><button class="download-button compact" type="button" data-export="wifi-risk">Download CSV</button></div></header><div class="table-scroll"><table class="wifi-risk-table"><thead><tr><th>Access Point</th><th>Risk</th><th>Zero-Signal Rate</th><th>Zero / All Samples</th><th>Affected Robots</th><th>Average RSSI</th><th>Latest Data</th></tr></thead><tbody id="wifiRiskBody"><tr><td colspan="7" class="empty-cell">Waiting for data</td></tr></tbody></table></div></article>
+        </section>
+
+        <section class="view-panel" data-view-panel="alarms" aria-labelledby="alarmsHeading">
+          <div class="section-intro"><div><span class="section-kicker">ALERTS</span><h2 id="alarmsHeading">Robot Alert Causes</h2><p>Engineers can see whether each robot has delayed telemetry, low battery, latest-known signal loss, or a device-reported error.</p></div></div>
+          <div class="focus-strip alarm-focus"><div><span>Robots Needing Attention</span><strong id="alarmRobotValue">--</strong><small id="alarmRobotIds">IDs: --</small></div><div><span>Low Battery</span><strong id="alarmLowBatteryValue">--</strong><small id="alarmLowBatteryIds">IDs: --</small></div><div><span>Latest RSSI = 0</span><strong id="alarmNoSignalValue">--</strong><small id="alarmNoSignalIds">IDs: --</small></div></div>
+          <div class="two-column-grid alarm-layout">
+            <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">ERROR SAMPLES</span><h3>Error Sample Trend</h3><p>Error samples in status history, not independent alarm events</p></div><button class="download-button compact" type="button" data-export="alarm-trend">Download CSV</button></header><div id="alarmChart" class="chart-host"></div></article>
+            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">ACTIONABLE CAUSES</span><h3>Robot Alert Causes</h3><p>Grouped by explicit snapshot and freshness evidence; one robot may appear under more than one cause</p></div><div class="panel-tools"><span class="source-chip"><strong id="alertBadge">0</strong>&nbsp;groups</span><button class="download-button compact" type="button" data-export="alerts">Download CSV</button></div></header><div id="alertList" class="alert-list empty-state">No alert data</div></article>
+          </div>
+        </section>
+
+        <section class="view-panel" data-view-panel="robots" aria-labelledby="robotsHeading">
+          <div class="section-intro search-heading"><div><span class="section-kicker">ROBOT DETAILS</span><h2 id="robotsHeading">Robot Operating Details</h2><p>Search status, battery, task, mode, network and position in one place.</p></div><div class="section-actions"><input id="robotSearch" class="search-input" type="search" placeholder="Search robot ID, status, task or position"><button class="download-button" type="button" data-export="robots">Download CSV</button></div></div>
+          <article class="panel table-panel"><div class="table-scroll wide-table-scroll"><table class="vitals-table"><thead><tr><th>Robot ID</th><th>Status</th><th>Battery</th><th>Task</th><th>Operating Mode</th><th>Current RSSI</th><th>Zero-Signal Rate</th><th>Access Point</th><th>Position</th><th>Latest Data Time</th></tr></thead><tbody id="robotVitalsBody"><tr><td colspan="10" class="empty-cell">Waiting for data</td></tr></tbody></table></div></article>
+        </section>
+
+        <section class="view-panel" data-view-panel="robot-profile" aria-labelledby="robotProfileHeading">
+          <div class="section-intro search-heading">
+            <div><span class="section-kicker">ROBOT PROFILE</span><h2 id="robotProfileHeading">Single Robot Status</h2><p id="profileRobotSubtitle">Select a Robot ID to review its complete status.</p></div>
+            <div class="section-actions profile-controls"><label class="profile-robot-picker" for="profileRobotSelect"><span>Robot ID</span><select id="profileRobotSelect" aria-label="Select Robot ID on profile"><option value="">Waiting for robots</option></select></label><button class="download-button" type="button" data-export="robot-profile">Download CSV</button></div>
+          </div>
+
+          <article class="profile-alert-banner" id="profileAlertBanner" data-tone="neutral">
+            <span>Alert Cause</span><strong>Select a robot to evaluate its current alert causes.</strong>
+          </article>
+
+          <div class="metric-grid profile-metric-grid">
+            <article class="metric-card" data-tone="green"><div class="metric-top"><span>Operating Status</span><b>01</b></div><strong id="profileStatusValue">--</strong><small id="profileStatusDetail">Current state</small></article>
+            <article class="metric-card" data-tone="amber"><div class="metric-top"><span>Battery</span><b>02</b></div><strong id="profileBatteryValue">--</strong><small id="profileBatteryDetail">Level and charging state</small></article>
+            <article class="metric-card" data-tone="indigo"><div class="metric-top"><span>Current Task</span><b>03</b></div><strong id="profileTaskValue">--</strong><small id="profileTaskDetail">Job and target</small></article>
+            <article class="metric-card" data-tone="violet"><div class="metric-top"><span>WiFi</span><b>04</b></div><strong id="profileWifiValue">--</strong><small id="profileWifiDetail">RSSI and access point</small></article>
+            <article class="metric-card" data-tone="blue"><div class="metric-top"><span>Position</span><b>05</b></div><strong id="profilePositionValue">--</strong><small id="profilePositionDetail">Map and target</small></article>
+            <article class="metric-card" data-tone="red"><div class="metric-top"><span>Latest Data</span><b>06</b></div><strong id="profileDataTimeValue">--</strong><small id="profileDataTimeDetail">Freshness of latest telemetry</small></article>
+          </div>
+
+          <div class="two-column-grid profile-chart-grid">
+            <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">BATTERY</span><h3>Battery History</h3><p>Hourly average battery level for the selected robot</p></div><button class="download-button compact" type="button" data-export="profile-battery">Download CSV</button></header><div id="profileBatteryChart" class="chart-host"></div></article>
+            <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">NETWORK</span><h3>WiFi History</h3><p>Hourly average valid RSSI for the selected robot; source window is capped at 24 hours</p></div><button class="download-button compact" type="button" data-export="profile-wifi">Download CSV</button></header><div id="profileWifiChart" class="chart-host"></div></article>
+            <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">STATUS</span><h3>Error Sample History</h3><p>Hourly status samples marked as errors</p></div><button class="download-button compact" type="button" data-export="profile-status">Download CSV</button></header><div id="profileStatusChart" class="chart-host"></div></article>
+            <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">TASKS</span><h3>Task Volume History</h3><p>Daily task volume for the selected robot</p></div><button class="download-button compact" type="button" data-export="profile-jobs">Download CSV</button></header><div id="profileJobChart" class="chart-host"></div></article>
+          </div>
+
+          <div class="two-column-grid profile-detail-grid">
+            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">SOURCE FRESHNESS</span><h3>Source Data Times</h3><p>Exact current timestamps used by this profile</p></div></header><div class="table-scroll"><table class="compact-table"><thead><tr><th>Source</th><th>Latest Time</th></tr></thead><tbody id="profileSourceTimesBody"><tr><td colspan="2" class="empty-cell">Select a robot</td></tr></tbody></table></div></article>
+            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">TASK BREAKDOWN</span><h3>Task Types and Outcomes</h3><p>Selected time range; source records outcomes but not root-cause text</p></div><button class="download-button compact" type="button" data-export="profile-task-breakdown">Download CSV</button></header><div class="table-scroll"><table class="compact-table"><thead><tr><th>Task Type</th><th>Mode</th><th>Tasks</th><th>Completed</th><th>Failed</th><th>Latest</th></tr></thead><tbody id="profileTaskBreakdownBody"><tr><td colspan="6" class="empty-cell">Select a robot</td></tr></tbody></table></div></article>
+          </div>
+        </section>
+
+        <section class="view-panel" data-view-panel="data-quality" aria-labelledby="dataHeading">
+          <div class="section-intro"><div><span class="section-kicker">DATA QUALITY</span><h2 id="dataHeading">Data Quality</h2><p>Confirm source freshness, DWS refresh time and recent load batches.</p></div><button class="download-button" type="button" data-export="batches">Download Batch CSV</button></div>
+          <div class="freshness-grid" aria-live="polite">
+            <article><span>Status Data Time</span><strong id="sourceFreshness">--</strong><small>Robot status source anchor</small></article>
+            <article><span>Data Lag</span><strong id="sourceLag">--</strong><small>Calculated against database time</small></article>
+            <article><span>DWS Refresh Time</span><strong id="dwsFreshness">--</strong><small>Latest successful load time</small></article>
+            <article><span>WiFi Data Time</span><strong id="wifiFreshness">--</strong><small>Latest WiFi detail data</small></article>
+          </div>
+          <article class="panel table-panel"><header class="panel-header"><div><span class="panel-kicker">LOAD BATCHES</span><h3>Recent DWS Load Batches</h3><p>Use these batches to confirm whether the dashboard is current</p></div></header><div class="table-scroll"><table class="batch-status-table"><thead><tr><th>Batch ID</th><th>Start Time</th><th>End Time</th><th>Status</th><th>Error Message</th></tr></thead><tbody id="batchTableBody"><tr><td colspan="5" class="empty-cell">Waiting for data</td></tr></tbody></table></div></article>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js?v=20260722-13" defer></script>
+</body>
+</html>

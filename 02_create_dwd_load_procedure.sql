@@ -344,6 +344,7 @@ BEGIN
             (N'ssid', N'nvarchar200', N'ssid', 10),
             (N'bssid', N'nvarchar200', N'bssid', 10),
             (N'rssi', N'decimal18', N'rssi', 10),
+            (N'rssi', N'decimal18', N'wifi_signal_level', 20),
             (N'signal_quality', N'decimal18', N'signal_quality', 10),
             (N'signal_quality', N'decimal18', N'wifi_quality', 20),
             (N'network_status', N'nvarchar100', N'network_status', 10),
@@ -821,6 +822,16 @@ BEGIN
                 END;
                 ELSE IF @target_table = N'fact_amr_queue'
                 BEGIN
+                    /* AMR_Queue stores an offset-aware UTC instant. DWD's task
+                       contract is Thailand local wall clock, not a stripped UTC
+                       clock; preserve the instant before removing the offset. */
+                    IF @p_source_schema = N'ODS'
+                       AND @p_source_table = N'AMR_Queue'
+                    BEGIN
+                        SET @event_time = N'TRY_CONVERT(DATETIME2(3), SWITCHOFFSET(TRY_CONVERT(DATETIMEOFFSET(7), src.[enqueued_at]), N''+07:00''))';
+                        SET @queue_start_time = N'TRY_CONVERT(DATETIME2(3), SWITCHOFFSET(TRY_CONVERT(DATETIMEOFFSET(7), src.[enqueued_at]), N''+07:00''))';
+                    END;
+
                     SET @insert_columns = N'
                         queue_id, event_time, robot_id, robot_code, project_id, project_code,
                         job_id, subjob_id, queue_status, priority_value, start_station_code,

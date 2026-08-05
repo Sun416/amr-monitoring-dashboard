@@ -1,14 +1,35 @@
 # AMR 项目下一步
 
-更新时间：2026-07-21
+更新时间：2026-07-28
 
-完整当前状态统一以 `PROJECT_STATUS_COMPACT.md` 为准。本文件只保留近期动作：
+完整状态以 `PROJECT_STATUS_COMPACT.md` 为准；完整历史决策见
+`PROJECT_CONTEXT_INTEGRATED.md`。本文件只保留近期动作。
 
-1. 等用户确认是否启用 `dbo.MA_AMR.id=6 (AMR_03)`；未确认不修改。
-2. 排查 `dbo.robot_*_history` 上游遥测停止/延迟问题。
-3. 获得 SQL Server Agent 权限后执行并验证 `36_create_sql_server_agent_split_jobs.sql`。
-4. 追平历史 ODS/DWD/DWS 聚合并核验趋势时间锚点。
-5. Agent 稳定后追加 SQL Server CDC / Flink CDC。
-6. 有明确分析交付需求后再决定是否建设 ADS。
+## P0：恢复数据与自动运行
 
-监控 Web：`http://127.0.0.1:3080/`，当前为英文界面。
+1. 排查并恢复 `dbo.robot_*_history` 上游遥测持续写入。
+2. 结合 AP 控制器、机器人电源、发布器和采集器日志确认多路遥测停更的真实根因。
+3. 获得 SQL Server Agent / `msdb` 权限后安装并验证：
+   - 快速当前快照作业。
+   - 历史 ODS/DWD/DWS 同步作业。
+   - ETL 新鲜度检查作业。
+4. 连续观察作业的延迟、重试、并发、失败恢复和数据库增长。
+
+## P1：补齐分析证据
+
+1. 建立“诊断 -> 故障事件 -> 人工确认 -> 维修 -> 恢复 -> 关闭”的写入闭环。
+2. 让调度系统在发生指派时保存候选车辆、资格、评分、选择和拒绝原因。
+3. 补路线段、到站、上下料、离站和任务里程事件。
+4. 由业务确认 `AMR_Subjob_Analyze.limit` 单位、班次边界、准时率和工作率目标。
+
+## P2：后续架构
+
+1. Agent 作业稳定后建设 SQL Server CDC / Flink CDC。
+2. 正式内网部署 Web 前补用户认证、HTTPS、操作审计、固定地址和服务自动恢复。
+3. 有明确 Power BI 或专题分析交付后再决定是否建设 ADS。
+
+## 待业务确认
+
+- `dbo.MA_AMR.id=6 (AMR_03)` 是否启用；未确认不得修改。
+
+监控 Web：`http://127.0.0.1:3080/`，当前为英文分析界面。

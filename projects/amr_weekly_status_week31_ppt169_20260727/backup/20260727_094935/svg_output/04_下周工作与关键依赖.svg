@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <g id="background">
+    <rect x="0" y="0" width="1280" height="720" fill="#F8FBFD"/>
+    <rect x="0" y="0" width="16" height="720" fill="#0076A8"/>
+  </g>
+  <g id="header">
+    <text x="56" y="66" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="42" font-weight="700" fill="#142434">下周工作与关键依赖</text>
+    <text x="56" y="108" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="30" fill="#526575">先恢复持续写入，再实现自动调度，最后评估低延迟方案</text>
+    <line x1="56" y1="126" x2="1224" y2="126" stroke="#C8DAE4" stroke-width="2"/>
+  </g>
+  <g id="roadmap-axis">
+    <!-- structural-visualization: roadmap_vertical -->
+    <line x1="98" y1="170" x2="98" y2="612" stroke="#C8DAE4" stroke-width="4"/>
+    <circle cx="98" cy="194" r="15" fill="#0076A8"/>
+    <circle cx="98" cy="294" r="15" fill="#D97706"/>
+    <circle cx="98" cy="394" r="15" fill="#75B9D6"/>
+    <circle cx="98" cy="494" r="15" fill="#75B9D6"/>
+    <circle cx="98" cy="594" r="15" fill="#FFFFFF" stroke="#0076A8" stroke-width="3"/>
+  </g>
+  <g id="milestone-1">
+    <rect x="132" y="154" width="662" height="80" fill="#FFFFFF" stroke="#0076A8" stroke-width="2"/>
+    <rect x="132" y="154" width="8" height="80" fill="#0076A8"/>
+    <text x="160" y="187" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">01 · 恢复上游遥测写入</text>
+    <text x="160" y="217" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" fill="#526575">排查 robot_*_history 数据锚点滞后，恢复持续更新</text>
+    <text x="766" y="186" text-anchor="end" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" font-weight="700" fill="#0076A8">最高优先级</text>
+  </g>
+  <g id="milestone-2">
+    <rect x="132" y="254" width="662" height="80" fill="#FFFFFF" stroke="#D97706" stroke-width="2"/>
+    <rect x="132" y="254" width="8" height="80" fill="#D97706"/>
+    <text x="160" y="287" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">02 · 获取 Agent / msdb 权限</text>
+    <text x="160" y="317" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" fill="#526575">申请并确认 SQL Server Agent 所需角色和作业权限</text>
+    <text x="766" y="286" text-anchor="end" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" font-weight="700" fill="#D97706">当前阻塞</text>
+  </g>
+  <g id="milestone-3">
+    <rect x="132" y="354" width="662" height="80" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2"/>
+    <rect x="132" y="354" width="8" height="80" fill="#75B9D6"/>
+    <text x="160" y="387" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">03 · 安装并验证自动任务</text>
+    <text x="160" y="417" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" fill="#526575">快速快照约 1 分钟；历史分析约 10 分钟</text>
+    <use data-icon="tabler-outline/clock" x="728" y="372" width="36" height="36" fill="#0076A8" stroke-width="2"/>
+  </g>
+  <g id="milestone-4">
+    <rect x="132" y="454" width="662" height="80" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2"/>
+    <rect x="132" y="454" width="8" height="80" fill="#75B9D6"/>
+    <text x="160" y="487" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">04 · 验证全链路稳定性</text>
+    <text x="160" y="517" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" fill="#526575">持续检查 ODS / DWD / DWS 水位、批次和趋势锚点</text>
+    <use data-icon="tabler-outline/activity" x="728" y="472" width="36" height="36" fill="#0076A8" stroke-width="2"/>
+  </g>
+  <g id="milestone-5">
+    <rect x="132" y="554" width="662" height="80" fill="#FFFFFF" stroke="#0076A8" stroke-width="2"/>
+    <rect x="132" y="554" width="8" height="80" fill="#0076A8"/>
+    <text x="160" y="587" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">05 · 评估 CDC / Flink CDC</text>
+    <text x="160" y="617" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" fill="#526575">仅在 Agent 任务稳定后进入低延迟变更捕获阶段</text>
+    <text x="766" y="586" text-anchor="end" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" font-weight="700" fill="#0076A8">后续阶段</text>
+  </g>
+  <g id="dependencies-panel">
+    <rect x="834" y="154" width="390" height="178" fill="#EEF5F9"/>
+    <use data-icon="tabler-outline/route" x="860" y="180" width="44" height="44" fill="#0076A8" stroke-width="2"/>
+    <text x="924" y="211" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">关键依赖</text>
+    <line x1="860" y1="236" x2="1198" y2="236" stroke="#C8DAE4" stroke-width="2"/>
+    <circle cx="872" cy="270" r="7" fill="#D97706"/>
+    <text x="896" y="278" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" fill="#142434">上游遥测持续写入</text>
+    <circle cx="872" cy="310" r="7" fill="#D97706"/>
+    <text x="896" y="318" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" fill="#142434">Agent 权限审批</text>
+  </g>
+  <g id="completion-panel">
+    <rect x="834" y="352" width="390" height="140" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2"/>
+    <use data-icon="tabler-outline/calendar-check" x="860" y="376" width="44" height="44" fill="#2E8B57" stroke-width="2"/>
+    <text x="924" y="407" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">完成标准</text>
+    <text x="860" y="452" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" fill="#142434">自动任务可稳定执行</text>
+    <text x="860" y="480" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" fill="#526575">数据新鲜度检查持续为 SUCCESS</text>
+  </g>
+  <g id="risk-panel">
+    <rect x="834" y="512" width="390" height="122" fill="#FFFFFF" stroke="#C43D3D" stroke-width="2"/>
+    <use data-icon="tabler-outline/alert-triangle" x="860" y="536" width="44" height="44" fill="#C43D3D" stroke-width="2"/>
+    <text x="924" y="567" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">风险提示</text>
+    <text x="860" y="608" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" fill="#526575">动态在线数据需汇报前复核</text>
+    <text x="860" y="630" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" fill="#526575">AMR_03 未经确认保持 inactive</text>
+  </g>
+  <g id="footer">
+    <line x1="56" y1="658" x2="1224" y2="658" stroke="#C8DAE4" stroke-width="2"/>
+    <text x="56" y="690" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="16" fill="#0076A8">NEXT：恢复数据 → 自动调度 → 稳定验证 → 低延迟评估</text>
+    <text x="1224" y="690" text-anchor="end" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="16" fill="#7D8E9A">04 / 04</text>
+  </g>
+</svg>

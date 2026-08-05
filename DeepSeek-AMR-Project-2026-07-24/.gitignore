@@ -1,0 +1,17 @@
+.codex/
+__pycache__/
+*.py[cod]
+
+# Local database/export artifacts
+outputs/
+audit_results/
+_datagrip_*.txt
+
+# Generated presentation/report files
+*.pptx
+*.xlsx
+*.inspect.ndjson
+*.png
+*.zip
+*.tar.gz
+

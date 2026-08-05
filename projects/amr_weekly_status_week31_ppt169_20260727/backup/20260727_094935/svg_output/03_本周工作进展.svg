@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <g id="background">
+    <rect x="0" y="0" width="1280" height="720" fill="#F8FBFD" />
+    <rect x="0" y="0" width="16" height="720" fill="#0076A8" />
+  </g>
+  <g id="header">
+    <text x="56" y="66" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="42" font-weight="700" fill="#142434">本周工作进展</text>
+    <text x="56" y="108" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="30" fill="#526575">数据链路同步、新鲜度监控、Web 验证与工程交付整理</text>
+    <line x1="56" y1="126" x2="1224" y2="126" stroke="#C8DAE4" stroke-width="2" />
+  </g>
+  <g id="progress-data-sync">
+    
+    <rect x="56" y="158" width="458" height="102" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2" />
+    <rect x="56" y="158" width="8" height="102" fill="#2E8B57" />
+    <use data-icon="tabler-outline/refresh" x="84" y="182" width="48" height="48" fill="#0076A8" stroke-width="2" />
+    <text x="152" y="194" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="28" font-weight="700" fill="#142434">数据链路同步</text>
+    <text x="105.92" y="248.2" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="18" fill="#526575">完成全层手动同步，12 条核心链路恢复 SUCCESS</text>
+  </g>
+  <g id="progress-freshness">
+    <rect x="56" y="276" width="458" height="102" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2" />
+    <rect x="56" y="276" width="8" height="102" fill="#2E8B57" />
+    <use data-icon="tabler-outline/activity" x="84" y="300" width="48" height="48" fill="#0076A8" stroke-width="2" />
+    <text x="152" y="312" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="28" font-weight="700" fill="#142434">新鲜度监控</text>
+    <text x="99.52" y="367.48" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="18" fill="#526575">建立日志、检查视图和过程，完成 Agent 任务草案</text>
+  </g>
+  <g id="progress-web">
+    <rect x="56" y="394" width="458" height="102" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2" />
+    <rect x="56" y="394" width="8" height="102" fill="#2E8B57" />
+    <use data-icon="tabler-outline/chart-infographic" x="84" y="418" width="48" height="48" fill="#0076A8" stroke-width="2" />
+    <text x="152" y="430" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="28" font-weight="700" fill="#142434">AMR Web 验证</text>
+    <text x="118.72" y="486.76" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="18" fill="#526575">状态、任务、位置、电量、WiFi 与批次正常渲染</text>
+  </g>
+  <g id="progress-delivery">
+    <rect x="56" y="512" width="458" height="102" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2" />
+    <rect x="56" y="512" width="8" height="102" fill="#2E8B57" />
+    <use data-icon="tabler-outline/calendar-check" x="84" y="536" width="48" height="48" fill="#0076A8" stroke-width="2" />
+    <text x="152" y="548" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="28" font-weight="700" fill="#142434">工程基线与交付</text>
+    <text x="152" y="583" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="18" fill="#526575">建立 Git 基线、Web 子模块与项目交付包</text>
+  </g>
+  <g id="dashboard-evidence">
+    <rect x="550" y="158" width="674" height="356" fill="#FFFFFF" stroke="#0076A8" stroke-width="2" />
+    <image href="../images/codex-clipboard-dde4b7b4-2d2c-4042-b2fa-2561fd69435c.png" x="558" y="166" width="658" height="348" preserveAspectRatio="xMidYMid meet" />
+    <rect x="550" y="486" width="674" height="28" fill="#0076A8" />
+    <text x="566" y="507" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">AMR Analytics Web · 阶段性监控页面</text>
+  </g>
+  <g id="dashboard-capabilities">
+    <rect x="550" y="536" width="674" height="78" fill="#EEF5F9" />
+    <text x="574" y="568" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="24" font-weight="700" fill="#142434">当前展示范围</text>
+    <text x="574" y="600" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="18" fill="#526575">运行状态 · 任务分析 · 电量趋势 · WiFi 风险 · 机器人明细 · DWS 批次</text>
+  </g>
+  <g id="other-work">
+    <rect x="56" y="634" width="1168" height="34" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2" />
+    <text x="76" y="658" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="18" font-weight="700" fill="#0076A8">其他工作</text>
+    <text x="186" y="658" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="18" fill="#526575">完成出差费用报销</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="698" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="16" fill="#7D8E9A">注：页面中的在线数、时间锚点等属于动态数据，正式汇报前需再次刷新确认</text>
+    <text x="1224" y="698" text-anchor="end" font-family="&quot;Microsoft YaHei&quot;, Arial, sans-serif" font-size="16" fill="#7D8E9A">03 / 04</text>
+  </g>
+</svg>

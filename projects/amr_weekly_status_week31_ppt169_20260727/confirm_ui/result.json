@@ -1,0 +1,51 @@
+{
+  "canvas": "ppt169",
+  "page_count": "4",
+  "audience": "部门主管、Automation 团队及 AMR 项目相关人员",
+  "content_divergence": "保留现有事实与三段式汇报要求，重新组织成更清晰、适合口头汇报的四页结构",
+  "mode": "briefing",
+  "visual_style": "swiss-minimal",
+  "color": {
+    "name": "SVI 蓝白企业科技",
+    "palette": {
+      "background": "#F8FBFD",
+      "secondary_bg": "#EEF5F9",
+      "primary": "#0076A8",
+      "accent": "#18A5D6",
+      "secondary_accent": "#75B9D6",
+      "body_text": "#142434"
+    }
+  },
+  "icons": "tabler-outline",
+  "typography": {
+    "name": "严谨统一",
+    "heading": {
+      "cjk": "Microsoft YaHei",
+      "latin": "Arial",
+      "css": "\"Microsoft YaHei\", Arial, sans-serif"
+    },
+    "body": {
+      "cjk": "Microsoft YaHei",
+      "latin": "Arial",
+      "css": "\"Microsoft YaHei\", Arial, sans-serif"
+    },
+    "body_size": 24,
+    "body_size_unit": "px",
+    "sizes": {
+      "title": 42,
+      "subtitle": 32,
+      "annotation": 18
+    }
+  },
+  "delivery_purpose": "balanced",
+  "formula_policy": "text-only",
+  "image_usage": [
+    "provided"
+  ],
+  "image_notes": "使用用户提供的数据库分层和 AMR Web 截图作为事实证据；截图保持原始比例、不裁切，避免作为满屏背景。",
+  "generation_mode": "continuous",
+  "refine_spec": false,
+  "stage": "final",
+  "status": "confirmed",
+  "confirmed_at": "2026-07-27T00:00:00+07:00"
+}

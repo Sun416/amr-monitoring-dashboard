@@ -1,0 +1,137 @@
+{
+  "tier": 2,
+  "lang": "zh",
+  "recommend": {
+    "icons": "tabler-outline",
+    "image_usage": ["provided"],
+    "formula_policy": "text-only",
+    "generation_mode": "continuous"
+  },
+  "page_count": {
+    "value": "4"
+  },
+  "color": {
+    "selected": 0,
+    "candidates": [
+      {
+        "name": "SVI 蓝白企业科技",
+        "note": "最接近现有周报，白底、SVI 蓝主色、少量亮蓝强调",
+        "palette": {
+          "background": "#F8FBFD",
+          "secondary_bg": "#EEF5F9",
+          "primary": "#0076A8",
+          "accent": "#18A5D6",
+          "secondary_accent": "#75B9D6",
+          "body_text": "#142434"
+        }
+      },
+      {
+        "name": "深海蓝工程评审",
+        "note": "更稳重，适合架构和进度评审",
+        "palette": {
+          "background": "#F8FAFC",
+          "secondary_bg": "#EFF4F8",
+          "primary": "#003F6C",
+          "accent": "#00A6C8",
+          "secondary_accent": "#5B86A5",
+          "body_text": "#14202B"
+        }
+      },
+      {
+        "name": "明亮钴蓝数据产品",
+        "note": "更现代、更醒目，适合突出 Web 监控平台",
+        "palette": {
+          "background": "#FFFFFF",
+          "secondary_bg": "#F3F6FA",
+          "primary": "#1565C0",
+          "accent": "#00A0A8",
+          "secondary_accent": "#76A7E0",
+          "body_text": "#1D2430"
+        }
+      }
+    ]
+  },
+  "typography": {
+    "selected": 0,
+    "candidates": [
+      {
+        "name": "严谨统一",
+        "note": "单一无衬线体系，通过字重和字号建立层级，最符合极简网格风",
+        "sample_heading": "AMR 数据监控项目周报",
+        "sample_heading_latin": "AMR Project Weekly Status",
+        "sample_body": "从数据分层建设走向运行分析与自动监控",
+        "sample_body_latin": "From data layering to operational analysis",
+        "heading": {
+          "cjk": "Microsoft YaHei",
+          "latin": "Arial",
+          "css": "\"Microsoft YaHei\", Arial, sans-serif"
+        },
+        "body": {
+          "cjk": "Microsoft YaHei",
+          "latin": "Arial",
+          "css": "\"Microsoft YaHei\", Arial, sans-serif"
+        },
+        "body_size": 24,
+        "sizes": {
+          "title": 42,
+          "subtitle": 32,
+          "annotation": 18
+        }
+      },
+      {
+        "name": "工程对比",
+        "note": "黑体标题配雅黑正文，技术感更强",
+        "sample_heading": "数据链路与当前进展",
+        "sample_heading_latin": "Data Pipeline and Progress",
+        "sample_body": "ODS、DWD、DWS 与监控 Web 已形成阶段性闭环",
+        "sample_body_latin": "The warehouse and monitoring web form a staged loop",
+        "heading": {
+          "cjk": "SimHei",
+          "latin": "Arial Black",
+          "css": "SimHei, \"Arial Black\", sans-serif"
+        },
+        "body": {
+          "cjk": "Microsoft YaHei",
+          "latin": "Arial",
+          "css": "\"Microsoft YaHei\", Arial, sans-serif"
+        },
+        "body_size": 24,
+        "sizes": {
+          "title": 42,
+          "subtitle": 32,
+          "annotation": 18
+        }
+      },
+      {
+        "name": "醒目标记",
+        "note": "Impact 英文配黑体中文，适合强调状态与关键进度",
+        "sample_heading": "STATUS / PROGRESS",
+        "sample_heading_latin": "STATUS / PROGRESS",
+        "sample_body": "本周完成数据链路同步与新鲜度监控",
+        "sample_body_latin": "Freshness monitoring and pipeline sync completed",
+        "heading": {
+          "cjk": "SimHei",
+          "latin": "Impact",
+          "css": "Impact, SimHei, sans-serif"
+        },
+        "body": {
+          "cjk": "Microsoft YaHei",
+          "latin": "Arial",
+          "css": "\"Microsoft YaHei\", Arial, sans-serif"
+        },
+        "body_size": 24,
+        "sizes": {
+          "title": 42,
+          "subtitle": 32,
+          "annotation": 18
+        }
+      }
+    ]
+  },
+  "image_notes": {
+    "value": "使用用户提供的数据库分层和 AMR Web 截图作为事实证据；截图保持原始比例、不裁切，避免作为满屏背景。"
+  },
+  "refine_spec": {
+    "value": false
+  }
+}

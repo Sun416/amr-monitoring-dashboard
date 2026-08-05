@@ -222,15 +222,20 @@ BEGIN
     SET NOCOUNT ON;
     SET XACT_ABORT ON;
 
-    DECLARE @lock_result INT;
+    DECLARE
+        @lock_result INT,
+        @latest_dwd_batch_id BIGINT;
 
     IF OBJECT_ID(N'[ODS].[sp_load_reference_full_replace]', N'P') IS NULL
        OR OBJECT_ID(N'[ODS].[sp_load_id_time_incremental]', N'P') IS NULL
        OR OBJECT_ID(N'[DWD].[sp_load_dwd_all_incremental]', N'P') IS NULL
+       OR OBJECT_ID(N'[DWD].[sp_load_robot_operation_event_incremental]', N'P') IS NULL
+       OR OBJECT_ID(N'[DWD].[sp_normalize_task_times_to_th]', N'P') IS NULL
+       OR OBJECT_ID(N'[DWD].[sp_reconcile_robot_identity_for_batch]', N'P') IS NULL
        OR OBJECT_ID(N'[DWD].[sp_enrich_robot_job_type_mode_incremental]', N'P') IS NULL
        OR OBJECT_ID(N'[DWS].[sp_load_dws_core_upsert]', N'P') IS NULL
     BEGIN
-        RAISERROR(N'Missing one or more historical-pipeline procedures. Install scripts 02, 21, 26, 42, and 35 first.', 16, 1);
+        RAISERROR(N'Missing one or more historical-pipeline procedures. Install scripts 02, 21, 26, 35, 42, and 87 first.', 16, 1);
         RETURN;
     END;
 
@@ -251,6 +256,16 @@ BEGIN
         EXEC [ODS].[sp_load_id_time_incremental];
         EXEC [DWD].[sp_load_dwd_all_incremental]
             @include_current_snapshot = 0;
+        EXEC [DWD].[sp_load_robot_operation_event_incremental]
+            @batch_size = 5000,
+            @bootstrap_rows = 5000;
+        EXEC [DWD].[sp_normalize_task_times_to_th]
+            @batch_size = 10000;
+        SELECT @latest_dwd_batch_id = MAX(b.batch_id)
+        FROM DWD.etl_batch AS b
+        WHERE b.batch_status = N'SUCCESS';
+        EXEC [DWD].[sp_reconcile_robot_identity_for_batch]
+            @dwd_batch_id = @latest_dwd_batch_id;
         EXEC [DWD].[sp_enrich_robot_job_type_mode_incremental];
         EXEC [DWS].[sp_load_dws_core_upsert]
             @include_current_snapshot = 0;

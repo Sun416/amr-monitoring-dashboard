@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <defs>
+    <marker id="arrowAccent" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#18A5D6"/>
+    </marker>
+  </defs>
+  <g id="background">
+    <rect x="0" y="0" width="1280" height="720" fill="#F8FBFD"/>
+    <rect x="0" y="0" width="16" height="720" fill="#0076A8"/>
+  </g>
+  <g id="header">
+    <text x="56" y="66" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="42" font-weight="700" fill="#142434">项目背景与当前架构</text>
+    <text x="56" y="108" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="30" fill="#526575">将分散的 AMR 原始业务表整理为可监控、可分析的数据链路</text>
+    <line x1="56" y1="126" x2="1224" y2="126" stroke="#C8DAE4" stroke-width="2"/>
+  </g>
+  <g id="architecture-source">
+    <rect x="56" y="158" width="176" height="212" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2"/>
+    <rect x="56" y="158" width="176" height="12" fill="#0076A8"/>
+    <use data-icon="tabler-outline/database" x="112" y="190" width="64" height="64" fill="#0076A8" stroke-width="2"/>
+    <text x="144" y="288" text-anchor="middle" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">IOT2020</text>
+    <text x="144" y="324" text-anchor="middle" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" font-weight="700" fill="#0076A8">约 281 张表</text>
+    <text x="144" y="352" text-anchor="middle" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" fill="#526575">状态 · 任务 · 电量</text>
+  </g>
+  <g id="architecture-layers">
+    <!-- structural-visualization: layered_architecture -->
+    <line x1="232" y1="264" x2="266" y2="264" stroke="#18A5D6" stroke-width="3" marker-end="url(#arrowAccent)"/>
+    <rect x="276" y="158" width="640" height="62" fill="#FFFFFF" stroke="#75B9D6" stroke-width="2"/>
+    <rect x="276" y="158" width="12" height="62" fill="#18A5D6"/>
+    <text x="312" y="197" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#0076A8">ODS</text>
+    <text x="430" y="194" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" fill="#142434">源表镜像、历史接入、增量水位线</text>
+
+    <line x1="596" y1="220" x2="596" y2="238" stroke="#18A5D6" stroke-width="3" marker-end="url(#arrowAccent)"/>
+    <rect x="276" y="248" width="640" height="62" fill="#FFFFFF" stroke="#75B9D6" stroke-width="2"/>
+    <rect x="276" y="248" width="12" height="62" fill="#0076A8"/>
+    <text x="312" y="287" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#0076A8">DWD</text>
+    <text x="430" y="284" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" fill="#142434">清洗标准化、维度、事实与快照</text>
+
+    <line x1="596" y1="310" x2="596" y2="328" stroke="#18A5D6" stroke-width="3" marker-end="url(#arrowAccent)"/>
+    <rect x="276" y="338" width="640" height="62" fill="#FFFFFF" stroke="#75B9D6" stroke-width="2"/>
+    <rect x="276" y="338" width="12" height="62" fill="#0076A8"/>
+    <text x="312" y="377" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#0076A8">DWS</text>
+    <text x="430" y="374" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" fill="#142434">电量、状态、任务、队列、WiFi 与当前快照</text>
+  </g>
+  <g id="architecture-output">
+    <line x1="916" y1="369" x2="946" y2="369" stroke="#18A5D6" stroke-width="3" marker-end="url(#arrowAccent)"/>
+    <rect x="956" y="158" width="268" height="242" fill="#EEF5F9" stroke="#0076A8" stroke-width="2"/>
+    <use data-icon="tabler-outline/chart-infographic" x="1058" y="190" width="64" height="64" fill="#0076A8" stroke-width="2"/>
+    <text x="1090" y="290" text-anchor="middle" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">AMR Web</text>
+    <text x="1090" y="326" text-anchor="middle" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" fill="#0076A8">Node.js API → DWS</text>
+    <text x="1090" y="360" text-anchor="middle" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" fill="#526575">状态展示与分析入口</text>
+  </g>
+  <g id="evidence-ods">
+    <rect x="56" y="438" width="388" height="214" fill="#FFFFFF" stroke="#0076A8" stroke-width="2"/>
+    <image href="../images/codex-clipboard-f62fbebd-fd43-46fa-87c0-04abb60bcdc2.png" x="62" y="444" width="376" height="200" preserveAspectRatio="xMidYMid meet"/>
+    <rect x="56" y="622" width="388" height="30" fill="#0076A8"/>
+    <text x="72" y="644" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" font-weight="700" fill="#FFFFFF">原始表 → ODS 筛选与接入</text>
+  </g>
+  <g id="evidence-dwd-dws">
+    <rect x="464" y="438" width="388" height="214" fill="#FFFFFF" stroke="#0076A8" stroke-width="2"/>
+    <image href="../images/codex-clipboard-f02c6311-e33f-4dfa-8184-7b13649c0b04.png" x="470" y="444" width="376" height="200" preserveAspectRatio="xMidYMid meet"/>
+    <rect x="464" y="622" width="388" height="30" fill="#0076A8"/>
+    <text x="480" y="644" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="18" font-weight="700" fill="#FFFFFF">DWD 清洗层 → DWS 汇总层</text>
+  </g>
+  <g id="current-status">
+    <rect x="872" y="438" width="352" height="214" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2"/>
+    <text x="896" y="478" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="28" font-weight="700" fill="#142434">当前阶段状态</text>
+    <line x1="896" y1="494" x2="1200" y2="494" stroke="#DCE8EF" stroke-width="2"/>
+    <circle cx="908" cy="530" r="7" fill="#2E8B57"/>
+    <text x="932" y="538" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" fill="#142434">ODS / DWD / DWS 已建立</text>
+    <circle cx="908" cy="576" r="7" fill="#2E8B57"/>
+    <text x="932" y="584" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" fill="#142434">监控 Web 已可使用</text>
+    <circle cx="908" cy="622" r="7" fill="#D97706"/>
+    <text x="932" y="630" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="24" fill="#142434">自动调度仍待权限</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="690" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="16" fill="#7D8E9A">历史分析链路：dbo → ODS → DWD → DWS；当前 Web 不依赖 ADS</text>
+    <text x="1224" y="690" text-anchor="end" font-family='"Microsoft YaHei", Arial, sans-serif' font-size="16" fill="#7D8E9A">02 / 04</text>
+  </g>
+</svg>

@@ -24,6 +24,19 @@ BEGIN
     RETURN;
 END;
 
+IF OBJECT_ID(N'[DWD].[sp_reconcile_robot_identity_for_batch]', N'P') IS NULL
+BEGIN
+    SELECT N'Missing procedure: DWD.sp_reconcile_robot_identity_for_batch. Run 87_install_dwd_incremental_robot_identity_reconciliation.sql first.' AS [check_message];
+    RETURN;
+END;
+
+IF OBJECT_ID(N'[DWD].[sp_load_robot_operation_event_incremental]', N'P') IS NULL
+   OR OBJECT_ID(N'[DWD].[sp_normalize_task_times_to_th]', N'P') IS NULL
+BEGIN
+    SELECT N'Missing task time-zone procedure. Run 52_install_robot_event_incremental_loader.sql and 113_install_dwd_task_timezone_normalizer.sql first.' AS [check_message];
+    RETURN;
+END;
+
 DECLARE @before_batch_id BIGINT;
 DECLARE @after_batch_id BIGINT;
 
@@ -32,8 +45,18 @@ FROM [DWD].[etl_batch];
 
 EXEC [DWD].[sp_load_dwd_all_incremental];
 
+EXEC [DWD].[sp_load_robot_operation_event_incremental]
+    @batch_size = 5000,
+    @bootstrap_rows = 5000;
+
+EXEC [DWD].[sp_normalize_task_times_to_th]
+    @batch_size = 10000;
+
 SELECT @after_batch_id = MAX([batch_id])
 FROM [DWD].[etl_batch];
+
+EXEC [DWD].[sp_reconcile_robot_identity_for_batch]
+    @dwd_batch_id = @after_batch_id;
 
 SELECT TOP 20
     N'01_latest_dwd_batch' AS [check_section],

@@ -1,0 +1,70 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <g id="background">
+    <rect x="0" y="0" width="1280" height="720" fill="#F8FBFD" />
+    <rect x="0" y="0" width="16" height="720" fill="#0076A8" />
+  </g>
+  <g id="header">
+    <text x="56" y="66" font-family="Arial, Microsoft YaHei, sans-serif" font-size="42" font-weight="700" fill="#142434">Carrying Out the Complete Data Analysis Process</text>
+    <text x="56" y="108" font-family="Arial, Microsoft YaHei, sans-serif" font-size="28" fill="#526575">From source review and data modeling to analysis, validation and dashboard delivery</text>
+    <line x1="56" y1="126" x2="1224" y2="126" stroke="#C8DAE4" stroke-width="2" />
+  </g>
+  <g id="progress-data-sync">
+    
+    <rect x="56" y="158" width="458" height="102" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2" />
+    <rect x="56" y="158" width="8" height="102" fill="#2E8B57" />
+    <use data-icon="tabler-outline/refresh" x="84" y="182" width="48" height="48" fill="#0076A8" stroke-width="2" />
+    <text x="152" y="194" font-family="Arial, Microsoft YaHei, sans-serif" font-size="25" font-weight="700" fill="#142434">1. Data Source Review</text>
+    <text x="105.92" y="237" font-family="Arial, Microsoft YaHei, sans-serif" font-size="17" fill="#526575">
+      <tspan x="105.92" dy="0">Reviewed source tables and identified AMR</tspan>
+      <tspan x="105.92" dy="22">status, job, battery, location and WiFi data</tspan>
+    </text>
+  </g>
+  <g id="progress-freshness">
+    <rect x="56" y="276" width="458" height="102" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2" />
+    <rect x="56" y="276" width="8" height="102" fill="#2E8B57" />
+    <use data-icon="tabler-outline/activity" x="84" y="300" width="48" height="48" fill="#0076A8" stroke-width="2" />
+    <text x="152" y="312" font-family="Arial, Microsoft YaHei, sans-serif" font-size="25" font-weight="700" fill="#142434">2. Data Modeling &amp; Processing</text>
+    <text x="99.52" y="355" font-family="Arial, Microsoft YaHei, sans-serif" font-size="17" fill="#526575">
+      <tspan x="99.52" dy="0">Built the ODS, DWD and DWS layers;</tspan>
+      <tspan x="99.52" dy="22">completed cleansing and full-layer sync</tspan>
+    </text>
+  </g>
+  <g id="progress-web">
+    <rect x="56" y="394" width="458" height="102" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2" />
+    <rect x="56" y="394" width="8" height="102" fill="#2E8B57" />
+    <use data-icon="tabler-outline/chart-infographic" x="84" y="418" width="48" height="48" fill="#0076A8" stroke-width="2" />
+    <text x="152" y="430" font-family="Arial, Microsoft YaHei, sans-serif" font-size="25" font-weight="700" fill="#142434">3. Analysis &amp; Validation</text>
+    <text x="118.72" y="474" font-family="Arial, Microsoft YaHei, sans-serif" font-size="17" fill="#526575">
+      <tspan x="118.72" dy="0">Analyzed operations, jobs, battery and WiFi;</tspan>
+      <tspan x="118.72" dy="22">validated freshness and metric consistency</tspan>
+    </text>
+  </g>
+  <g id="progress-delivery">
+    <rect x="56" y="512" width="458" height="102" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2" />
+    <rect x="56" y="512" width="8" height="102" fill="#2E8B57" />
+    <use data-icon="tabler-outline/calendar-check" x="84" y="536" width="48" height="48" fill="#0076A8" stroke-width="2" />
+    <text x="152" y="548" font-family="Arial, Microsoft YaHei, sans-serif" font-size="25" font-weight="700" fill="#142434">4. Visualization &amp; Delivery</text>
+    <text x="152" y="583" font-family="Arial, Microsoft YaHei, sans-serif" font-size="17" fill="#526575">Delivered the AMR Web dashboard and project package</text>
+  </g>
+  <g id="dashboard-evidence">
+    <rect x="550" y="158" width="674" height="356" fill="#FFFFFF" stroke="#0076A8" stroke-width="2" />
+    <image href="../images/codex-clipboard-dde4b7b4-2d2c-4042-b2fa-2561fd69435c.png" x="558" y="166" width="658" height="348" preserveAspectRatio="xMidYMid meet" />
+    <rect x="550" y="486" width="674" height="28" fill="#0076A8" />
+    <text x="566" y="507" font-family="Arial, Microsoft YaHei, sans-serif" font-size="18" font-weight="700" fill="#FFFFFF">AMR Analytics Web · Analysis Output</text>
+  </g>
+  <g id="dashboard-capabilities">
+    <rect x="550" y="536" width="674" height="78" fill="#EEF5F9" />
+    <text x="574" y="568" font-family="Arial, Microsoft YaHei, sans-serif" font-size="24" font-weight="700" fill="#142434">Current Coverage</text>
+    <text x="574" y="600" font-family="Arial, Microsoft YaHei, sans-serif" font-size="17" fill="#526575">Operations · Jobs · Battery · WiFi Risk · Robot Details · DWS Batches</text>
+  </g>
+  <g id="other-work">
+    <rect x="56" y="634" width="1168" height="34" fill="#FFFFFF" stroke="#C8DAE4" stroke-width="2" />
+    <text x="76" y="658" font-family="Arial, Microsoft YaHei, sans-serif" font-size="18" font-weight="700" fill="#0076A8">Other</text>
+    <text x="152" y="658" font-family="Arial, Microsoft YaHei, sans-serif" font-size="18" fill="#526575">Completed business travel expense reimbursement</text>
+  </g>
+  <g id="footer">
+    <text x="56" y="698" font-family="Arial, Microsoft YaHei, sans-serif" font-size="16" fill="#7D8E9A">Note: online counts and time anchors are dynamic and must be refreshed before presentation</text>
+    <text x="1224" y="698" text-anchor="end" font-family="Arial, Microsoft YaHei, sans-serif" font-size="16" fill="#7D8E9A">03 / 04</text>
+  </g>
+</svg>

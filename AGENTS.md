@@ -4,6 +4,7 @@
 
 - Read `PROJECT_STATUS_COMPACT.md` first for the current AMR warehouse and Web status.
 - Treat it as the compact continuation point; do not reconstruct the project from the long conversation unless a legacy failure must be investigated.
+- Read `PROJECT_CONTEXT_INTEGRATED.md` when the task spans multiple modules, depends on historical decisions, or asks for the full project context.
 - Re-verify volatile facts such as row counts, source timestamps, online robots, batch status, and permissions before acting.
 
 ## Project Scope
