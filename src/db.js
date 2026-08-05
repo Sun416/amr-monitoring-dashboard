@@ -23,7 +23,7 @@ function parseInteger(value, defaultValue, minimum, maximum) {
   return Math.min(maximum, Math.max(minimum, parsed));
 }
 
-function getDatabaseConfig() {
+function getDatabaseConfig({ requestTimeoutMs } = {}) {
   const server = String(process.env.DB_SERVER || '').trim();
   const database = String(process.env.DB_DATABASE || 'IOT2020').trim();
   const user = String(process.env.DB_USER || '').trim();
@@ -54,7 +54,12 @@ function getDatabaseConfig() {
     password,
     options,
     connectionTimeout: parseInteger(process.env.DB_CONNECTION_TIMEOUT_MS, 15000, 1000, 120000),
-    requestTimeout: parseInteger(process.env.DB_REQUEST_TIMEOUT_MS, 120000, 5000, 900000),
+    requestTimeout: parseInteger(
+      requestTimeoutMs,
+      parseInteger(process.env.DB_REQUEST_TIMEOUT_MS, 120000, 5000, 900000),
+      5000,
+      900000
+    ),
     pool: {
       max: 8,
       min: 0,
@@ -98,6 +103,7 @@ async function closePool() {
 module.exports = {
   sql,
   getPool,
+  getDatabaseConfig,
   closePool,
   DatabaseConfigurationError,
   parseInteger

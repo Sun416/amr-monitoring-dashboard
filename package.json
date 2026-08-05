@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check src/db.js && node --check src/dashboard-service.js && node --check public/app.js"
+    "check": "node --check server.js && node --check src/db.js && node --check src/dashboard-service.js && node --check src/dws-refresh-service.js && node --check src/analysis-engine.js && node --check src/wifi-minimum-diagnostic.js && node --check src/wifi-weak-signal-diagnostic.js && node --check public/app.js && node --check scripts/inspect-analysis-schema.js && node --check scripts/inspect-operation-evidence.js && node --check scripts/inspect-event-audit-readiness.js && node --check scripts/run-sql-file.js && node --check scripts/benchmark-wifi-running-analysis.js",
+    "test": "node --test --test-isolation=none test/*.test.js"
   },
   "engines": {
     "node": ">=20"

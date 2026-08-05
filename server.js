@@ -2,8 +2,9 @@
 
 const path = require('node:path');
 const express = require('express');
-const { loadDashboard, synchronizeCurrentSnapshot, checkDatabase } = require('./src/dashboard-service');
+const { loadDashboard, loadTaskAnalytics, loadRobotProfile, checkDatabase } = require('./src/dashboard-service');
 const { closePool, DatabaseConfigurationError, parseInteger } = require('./src/db');
+const { executeDwsRefresh } = require('./src/dws-refresh-service');
 
 try {
   if (typeof process.loadEnvFile === 'function') process.loadEnvFile(path.join(__dirname, '.env'));
@@ -12,8 +13,8 @@ try {
 }
 
 const app = express();
-const host = String(process.env.WEB_HOST || '127.0.0.1').trim();
-const port = parseInteger(process.env.WEB_PORT, 3080, 1, 65535);
+const host = String(process.env.WEB_HOST_OVERRIDE || process.env.WEB_HOST || '127.0.0.1').trim();
+const port = parseInteger(process.env.WEB_PORT_OVERRIDE || process.env.WEB_PORT, 3080, 1, 65535);
 const publicDirectory = path.join(__dirname, 'public');
 
 app.disable('x-powered-by');
@@ -40,7 +41,10 @@ app.get('/api/dashboard', async (request, response, next) => {
   try {
     const dashboard = await loadDashboard({
       hours: request.query.hours,
-      days: request.query.days
+      days: request.query.days,
+      robotType: request.query.robotType,
+      wifiStart: request.query.wifiStart,
+      wifiEnd: request.query.wifiEnd
     });
     response.json(dashboard);
   } catch (error) {
@@ -48,10 +52,43 @@ app.get('/api/dashboard', async (request, response, next) => {
   }
 });
 
-app.post('/api/sync/current', async (request, response, next) => {
+app.get('/api/task-analytics', async (request, response, next) => {
   try {
-    const result = await synchronizeCurrentSnapshot();
-    response.json(result);
+    const taskAnalytics = await loadTaskAnalytics({
+      taskStart: request.query.start,
+      taskEnd: request.query.end,
+      robotCodes: request.query.robots || request.query.robot
+    });
+    response.json(taskAnalytics);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/robot/:robotId', async (request, response, next) => {
+  try {
+    const profile = await loadRobotProfile({
+      robotId: request.params.robotId,
+      hours: request.query.hours,
+      days: request.query.days
+    });
+    response.json(profile);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/sync/current', async (request, response, next) => {
+  response.status(410).json({
+    code: 'SNAPSHOT_SYNC_DISABLED',
+    message: 'Current-snapshot synchronization is disabled. The dashboard reads non-snapshot DWS aggregates and applies a 30-minute freshness gate.'
+  });
+});
+
+app.post('/api/sync/dws', async (request, response, next) => {
+  try {
+    const refresh = await executeDwsRefresh();
+    response.json(refresh);
   } catch (error) {
     next(error);
   }
@@ -67,19 +104,20 @@ app.use((error, request, response, next) => {
   if (response.headersSent) return next(error);
 
   const notConfigured = error instanceof DatabaseConfigurationError || error.code === 'DATABASE_NOT_CONFIGURED';
-  const status = notConfigured ? 503 : 500;
+  const status = notConfigured ? 503 : (error.statusCode || 500);
   console.error(`[${request.method} ${request.path}]`, error.message);
 
   response.status(status).json({
-    code: notConfigured ? 'DATABASE_NOT_CONFIGURED' : 'DATABASE_REQUEST_FAILED',
+    code: notConfigured ? 'DATABASE_NOT_CONFIGURED' : (error.code || 'DATABASE_REQUEST_FAILED'),
     message: notConfigured
       ? error.message
-      : 'Database request failed. Check the SQL Server connection, object permissions and server logs.'
+      : (error.statusCode ? error.message : 'Database request failed. Check the SQL Server connection, object permissions and server logs.')
   });
 });
 
 const server = app.listen(port, host, () => {
   console.log(`[AMR Monitor] http://${host}:${port}`);
+  console.log('[AMR Monitor] Current data source: non-snapshot DWS aggregates with freshness gating.');
 });
 
 async function shutdown(signal) {

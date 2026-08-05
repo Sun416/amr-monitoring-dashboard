@@ -2,41 +2,80 @@
 
 const state = {
   dashboard: null,
+  robotProfile: null,
+  selectedRobotId: null,
+  profileRequestId: 0,
   selectedRobotCode: null,
   selectedMapCode: null,
+  selectedWifiPoi: 'ALL',
+  selectedWifiRobot: 'ALL',
   loading: false,
   currentView: 'overview',
-  window: { key: 'd1', label: 'Last 1 day', hours: 24, days: 1 }
+  robotType: 'ALL',
+  window: { key: 'd1', label: 'Last 1 day', hours: 24, days: 1 },
+  wifiWindow: { isCustom: false, start: null, end: null },
+  taskAnalytics: null,
+  taskRobots: [],
+  taskTopLimit: 5,
+  taskRequestId: 0
 };
 
 const VIEW_META = {
-  overview: { eyebrow: '01 · OVERVIEW', title: 'Overview', description: 'Review fleet health first, then open a focused analysis view.' },
+  overview: { eyebrow: '01 · ANALYSIS CENTER', title: 'Analysis Center', description: 'Start with causes, supporting evidence and the next maintenance action.' },
   operations: { eyebrow: '02 · OPERATIONS', title: 'Operating Status', description: 'Review status, mode and robot position.' },
-  tasks: { eyebrow: '03 · TASKS', title: 'Task Analytics', description: 'Review task performance, queues and the current task snapshot.' },
+  tasks: { eyebrow: '03 · TASKS', title: 'Task Analytics', description: 'Review DWS utilization, idle causes, Calling Boxes, and assigned tasks.' },
   energy: { eyebrow: '04 · ENERGY', title: 'Energy Analytics', description: 'Identify exact robot IDs at low-battery risk and review the trend.' },
-  network: { eyebrow: '05 · NETWORK', title: 'Network Quality', description: 'Review RSSI, zero-signal rate and access-point risk.' },
-  alarms: { eyebrow: '06 · ALERTS', title: 'Robot Alert Causes', description: 'See low battery, latest-known signal loss and device-reported errors by robot ID.' },
+  network: { eyebrow: '05 · RUNNING WIFI', title: 'Running-Task WiFi Signal Analysis', description: 'Analyze signal trends, minimum-RSSI evidence, robot differences, and target-POI risks during Running tasks.' },
+  alarms: { eyebrow: '06 · ALERTS', title: 'Robot Alert Causes', description: 'See operational faults and telemetry-quality issues by robot ID.' },
   robots: { eyebrow: '07 · ROBOT DETAILS', title: 'Robot Details', description: 'Search robot-level operating data in one place.' },
-  'data-quality': { eyebrow: '08 · DATA QUALITY', title: 'Data Quality', description: 'Review data freshness, lag and DWS load batches.' }
+  'robot-profile': { eyebrow: '08 · ROBOT PROFILE', title: 'Robot Profile', description: 'Select one Robot ID and review its complete current and historical status.' },
+  'data-quality': { eyebrow: '09 · DATA QUALITY', title: 'Data Quality', description: 'Review data freshness, lag and DWS load batches.' }
 };
 
 const elements = Object.fromEntries(
   [
     'sidebar', 'sidebarOverlay', 'sidebarToggle', 'viewEyebrow', 'viewTitle', 'viewDescription',
     'currentDate', 'currentTime', 'freshnessDot', 'connectionStatus', 'sourceFreshness', 'sourceLag', 'dwsFreshness', 'wifiFreshness',
-    'rangeSelect', 'analysisWindowLabel', 'refreshButton', 'syncButton', 'exportAllButton', 'metricTotal', 'metricTotalScope', 'metricOnline',
+    'analysisWindowLabel', 'refreshButton', 'syncButton', 'exportAllButton', 'metricTotal', 'metricTotalScope', 'metricOnline',
     'metricOffline', 'metricJobs', 'metricJobScope', 'metricBattery', 'metricLowBattery', 'metricRssi', 'metricWifiCoverage',
     'metricZeroSignal', 'metricZeroSignalScope', 'metricAlarms', 'metricAlarmScope', 'metricTaskSuccess', 'metricTaskSuccessScope',
+    'analysisVerdict', 'analysisHeadline', 'analysisSummary', 'analysisConfidence', 'analysisRuleVersion',
+    'analysisRobotCount', 'analysisCoverage', 'analysisCoverageDetail', 'analysisGapCount', 'analysisWorkloadState',
+    'analysisWorkloadDetail', 'analysisDiagnosticList', 'workloadCauseStatus', 'workloadAnchor',
+    'workloadGroupSummary', 'workloadAnalysisBody', 'operationalAnalysisBody', 'measurementGapList',
+    'fleetStatusDonut', 'fleetRobotGrid', 'priorityRepairSummary',
+    'runningWifiFreshness', 'wifiStartTime', 'wifiEndTime', 'wifiApplyWindow',
+    'wifiConclusion', 'wifiRobotSelect', 'wifiPoiSelect',
+    'runningWifiChartSubtitle', 'runningWifiTrendChart', 'runningWifiMinimumDiagnostic', 'runningWifiNarrative',
+    'weakSignalRateSubtitle', 'weakSignalRateChart', 'weakSignalTimelineSubtitle', 'weakSignalTimelineChart',
+    'wifiPointStrengthSubtitle', 'wifiPointStrengthChart',
+    'diagnosisCauseChart', 'workloadDistributionChart', 'onTimeRateChart', 'queueWaitAnalysisChart', 'batteryCoverageAnalysisChart',
     'operationsOnlineValue', 'operationsOfflineValue', 'operationsOfflineIds', 'operationsActiveValue', 'operationsActiveIds',
     'taskSuccessValue', 'taskFailureValue', 'taskFailureSummary', 'taskActiveValue', 'taskActiveIds', 'energyAverageValue', 'energyLowBatteryValue', 'energyLowBatteryIds',
-    'networkRssiValue', 'networkZeroValue', 'networkCoverageValue', 'networkStaleIds', 'alarmRobotValue', 'alarmRobotIds',
+    'alarmRobotValue', 'alarmRobotIds',
     'alarmLowBatteryValue', 'alarmLowBatteryIds', 'alarmNoSignalValue', 'alarmNoSignalIds',
+    'alarmRssiIssueValue', 'alarmRssiIssueIds',
     'statusDistribution', 'modeDistribution', 'robotSearch', 'taskTableBody', 'taskFailureBody', 'lowBatteryRiskBody',
+    'taskRobotToggle', 'taskRobotMenu', 'taskTopLimitSelect', 'taskApplyWindow', 'taskDataScope',
+    'taskUtilizationValue', 'taskUtilizationDetail', 'taskExecutionValue', 'taskExecutionDetail',
+    'taskIdleValue', 'taskIdleDetail', 'taskDataExceptionValue', 'taskDataExceptionDetail',
+    'taskStateExceptionPanel', 'taskStateExceptionSummary', 'taskStateExceptionBody',
+    'taskUsageSubtitle', 'taskUsageChart', 'taskIdleTrendChart', 'taskIdleCauseChart',
+    'taskCallingBoxTitle', 'taskCallingBoxList', 'taskAssignedTitle', 'taskAssignedList',
     'alertList', 'alertBadge', 'robotMapLayer', 'mapEmpty', 'mapSelect', 'mappedRobotCount', 'mapCodeCount',
-    'selectedRobot', 'robotVitalsBody', 'wifiRiskBody', 'wifiWindowLabel', 'batteryChart', 'wifiChart',
-    'jobChart', 'alarmChart', 'queueChart', 'batteryTrendAnchor', 'batchTableBody', 'toast'
+    'selectedRobot', 'robotVitalsBody', 'batteryChart',
+    'jobChart', 'alarmChart', 'queueChart', 'batteryTrendAnchor', 'batchTableBody',
+    'profileRobotSelect', 'profileRobotSubtitle', 'profileAlertBanner', 'profileStatusValue', 'profileStatusDetail',
+    'profileBatteryValue', 'profileBatteryDetail', 'profileTaskValue', 'profileTaskDetail', 'profileWifiValue',
+    'profileWifiDetail', 'profilePositionValue', 'profilePositionDetail', 'profileDataTimeValue', 'profileDataTimeDetail',
+    'profileBatteryChart', 'profileWifiChart', 'profileStatusChart', 'profileJobChart', 'profileSourceTimesBody',
+    'profileTaskBreakdownBody', 'networkWifiAnalysisHost', 'runningWifiAnalysisSection', 'toast'
   ].map((id) => [id, document.getElementById(id)])
 );
+
+if (elements.networkWifiAnalysisHost && elements.runningWifiAnalysisSection) {
+  elements.networkWifiAnalysisHost.append(elements.runningWifiAnalysisSection);
+}
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -62,10 +101,11 @@ function activateView(view, { updateHash = true } = {}) {
   elements.viewEyebrow.textContent = meta.eyebrow;
   elements.viewTitle.textContent = meta.title;
   elements.viewDescription.textContent = meta.description;
-  document.title = `${meta.title} · AMR Operations Analytics`;
+  document.title = `${meta.title} · Robot Operations Analytics`;
   if (updateHash) history.replaceState(null, '', `#${view}`);
   closeSidebar();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (view === 'robot-profile' && state.dashboard) loadRobotProfile();
 }
 
 function svgElement(name, attributes = {}) {
@@ -98,6 +138,16 @@ function formatDateTime(value) {
   }).format(date);
 }
 
+function formatExactDateTime(value) {
+  if (!value) return '--';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat('en-GB', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  }).format(date);
+}
+
 function formatShortTime(value) {
   if (!value) return '--';
   const date = new Date(value);
@@ -107,15 +157,45 @@ function formatShortTime(value) {
   }).format(date);
 }
 
+function formatSeconds(value) {
+  const seconds = asNumber(value);
+  if (!Number.isFinite(seconds)) return '--';
+  if (seconds >= 3600) return `${formatNumber(seconds / 3600, 1)} h`;
+  if (seconds >= 120) return `${formatNumber(seconds / 60, 1)} min`;
+  return `${formatNumber(seconds, 1)} s`;
+}
+
 function dataTimeClass(value) {
   if (!value) return 'data-stale';
   const dataTime = new Date(value);
   const referenceTime = new Date(state.dashboard?.summary?.database_current_time || state.dashboard?.generatedAt || Date.now());
   if (Number.isNaN(dataTime.getTime()) || Number.isNaN(referenceTime.getTime())) return 'data-stale';
-  const staleMinutes = asNumber(state.dashboard?.staleMinutes, 5);
+  const staleMinutes = asNumber(state.dashboard?.staleMinutes, 30);
   return referenceTime.getTime() - dataTime.getTime() <= staleMinutes * 60 * 1000
     ? 'data-current'
     : 'data-stale';
+}
+
+function dataAgeMinutes(value) {
+  if (!value) return Number.POSITIVE_INFINITY;
+  const dataTime = new Date(value);
+  const referenceTime = new Date(state.dashboard?.summary?.database_current_time || state.dashboard?.generatedAt || Date.now());
+  if (Number.isNaN(dataTime.getTime()) || Number.isNaN(referenceTime.getTime())) return Number.POSITIVE_INFINITY;
+  return Math.max(0, (referenceTime.getTime() - dataTime.getTime()) / 60000);
+}
+
+function formatDataAge(value) {
+  const minutes = dataAgeMinutes(value);
+  if (!Number.isFinite(minutes)) return 'No timestamp available';
+  if (minutes >= 1440) return `${formatNumber(minutes / 1440, 1)} days old`;
+  if (minutes >= 60) return `${formatNumber(minutes / 60, 1)} hours old`;
+  return `${formatNumber(minutes)} minutes old`;
+}
+
+function isRobotDataStale(robot) {
+  const freshnessStatus = String(robot?.data_freshness_status || '').trim().toUpperCase();
+  if (freshnessStatus) return freshnessStatus !== 'CURRENT';
+  return dataAgeMinutes(robot?.latest_data_time) > asNumber(state.dashboard?.staleMinutes, 30);
 }
 
 function updateClock() {
@@ -137,7 +217,9 @@ function normalizedOnlineStatus(value) {
 
 function hasAlarm(robot) {
   const message = String(robot.error_message || '').trim().toUpperCase();
-  return !['', '-', 'NULL', 'UNDEFINED', 'NONE'].includes(message);
+  const code = String(robot.error_code || '').trim().toUpperCase();
+  return !['', '-', 'NULL', 'UNDEFINED', 'NONE'].includes(message)
+    || !['', '-', '0', '1', 'NULL', 'UNDEFINED', 'NONE', 'FALSE', 'TRUE', 'OK', 'NORMAL'].includes(code);
 }
 
 function hasActiveJob(robot) {
@@ -159,15 +241,58 @@ function isLowBattery(robot) {
 
 function isNoSignal(robot) {
   const value = robot?.current_rssi;
-  return value !== null && value !== undefined && value !== '' && Number(value) === 0;
+  const statusTime = robot?.status_event_time || robot?.source_event_time;
+  const statusStale = dataAgeMinutes(statusTime) > asNumber(state.dashboard?.staleMinutes, 30);
+  return value !== null
+    && value !== undefined
+    && value !== ''
+    && Number(value) === 0
+    && (normalizedOnlineStatus(robot?.online_status) !== 'online' || statusStale);
+}
+
+function hasRssiMeasurementIssue(robot) {
+  const sampleCount = asNumber(robot?.wifi_sample_count);
+  const unusableCount = asNumber(robot?.unusable_rssi_sample_count);
+  const unusableRate = sampleCount > 0 ? (100 * unusableCount / sampleCount) : 0;
+  const accessPoint = String(robot?.current_wifi_ap || '').trim();
+  const hasAssociationEvidence = (accessPoint !== '' && accessPoint !== '-')
+    || asNumber(robot?.current_wifi_count) > 0;
+  const wifiIsCurrent = robot?.wifi_is_current === true || asNumber(robot?.wifi_is_current) === 1;
+
+  return wifiIsCurrent
+    && robot?.raw_current_rssi !== null
+    && robot?.raw_current_rssi !== undefined
+    && Number(robot.raw_current_rssi) === 0
+    && (robot?.current_rssi === null || robot?.current_rssi === undefined || robot?.current_rssi === '')
+    && hasAssociationEvidence
+    && sampleCount >= 100
+    && unusableRate >= 95;
 }
 
 function robotAlertCauses(robot) {
   const causes = [];
+  if (isRobotDataStale(robot)) {
+    const freshnessStatus = String(robot.data_freshness_status || '').trim().toUpperCase();
+    const freshnessReason = {
+      DWS_REFRESH_TIMEOUT: `DWS refresh exceeded the ${formatNumber(state.dashboard?.staleMinutes || 30)}-minute threshold`,
+      DWS_SOURCE_LAG: `Source-to-DWS load lag exceeded the ${formatNumber(state.dashboard?.staleMinutes || 30)}-minute threshold`,
+      SOURCE_TIMEOUT: `No source event reached DWS within ${formatNumber(state.dashboard?.staleMinutes || 30)} minutes`,
+      MISSING: 'No non-snapshot DWS status aggregate is available'
+    }[freshnessStatus];
+    causes.push({
+      code: freshnessStatus || 'DATA_STALE',
+      reason: freshnessReason || (robot.latest_data_time
+        ? `DWS data has not updated within ${formatNumber(state.dashboard?.staleMinutes || 30)} minutes`
+        : 'No DWS telemetry timestamp is available'),
+      type: 'data-stale',
+      dataTime: robot.status_dws_load_time || robot.dws_load_time || robot.latest_data_time
+    });
+  }
   if (hasAlarm(robot)) {
     causes.push({
       code: String(robot.error_code || 'DEVICE_ERROR').trim(),
-      reason: String(robot.error_message).trim(),
+      reason: String(robot.error_message || '').trim()
+        || `Device emergency status reported (code ${String(robot.error_code).trim()})`,
       type: 'device-error',
       dataTime: robot.status_event_time || robot.source_event_time
     });
@@ -188,11 +313,28 @@ function robotAlertCauses(robot) {
       dataTime: robot.latest_wifi_time
     });
   }
+  if (hasRssiMeasurementIssue(robot)) {
+    const sampleCount = asNumber(robot.wifi_sample_count);
+    const unusableCount = asNumber(robot.unusable_rssi_sample_count);
+    const unusableRate = sampleCount > 0 ? (100 * unusableCount / sampleCount) : 0;
+    causes.push({
+      code: 'RSSI_MEASUREMENT_UNAVAILABLE',
+      reason: `WiFi association is present, but ${formatPercent(unusableRate, 1)} of recent RSSI samples are unusable`,
+      type: 'data-quality',
+      dataTime: robot.latest_wifi_time
+    });
+  }
   return causes;
 }
 
 function hasOperationalAlert(robot) {
   return robotAlertCauses(robot).length > 0;
+}
+
+function robotDiagnostic(robot) {
+  return (state.dashboard?.analysis?.priorityDiagnostics || []).find(
+    (diagnostic) => String(diagnostic.masterRobotId) === String(robot?.master_robot_id)
+  ) || null;
 }
 
 function taskFailureSummary(rows = []) {
@@ -239,13 +381,31 @@ function robotPoiSummary(robot) {
 }
 
 function selectedWindow() {
-  const option = elements.rangeSelect.selectedOptions[0];
-  return {
-    key: option?.value || 'd1',
-    label: option?.textContent?.trim() || 'Last 1 day',
-    hours: asNumber(option?.dataset.hours, 24),
-    days: asNumber(option?.dataset.days, 1)
-  };
+  return { ...state.window };
+}
+
+function selectedWifiAnalysisWindow() {
+  return state.wifiWindow.isCustom
+    ? {
+      isCustom: true,
+      start: state.wifiWindow.start,
+      end: state.wifiWindow.end
+    }
+    : { isCustom: false, start: null, end: null };
+}
+
+function wifiRefreshLabel(wifiWindow) {
+  if (!wifiWindow.isCustom) return state.window.label;
+  const format = (value) => String(value || '').replace('T', ' ').slice(0, 16);
+  return `Exact ${format(wifiWindow.start)} – ${format(wifiWindow.end)}`;
+}
+
+function selectedRobotType() {
+  return 'ALL';
+}
+
+function robotTypeLabel(value = state.robotType) {
+  return value === 'ALL' ? 'All Robots' : value;
 }
 
 function robotVisualState(robot) {
@@ -272,6 +432,7 @@ function setBusy(isBusy, message) {
   state.loading = isBusy;
   elements.refreshButton.disabled = isBusy;
   elements.syncButton.disabled = isBusy;
+  elements.wifiApplyWindow.disabled = isBusy;
   if (message) elements.connectionStatus.textContent = message;
 }
 
@@ -289,17 +450,24 @@ async function requestJson(url, options) {
 
 async function loadDashboard({ announce = false } = {}) {
   if (state.loading) return;
-  setBusy(true, 'Loading DWS and WiFi analytics data...');
+  setBusy(true, 'Loading non-snapshot DWS analytics data...');
 
   try {
     state.window = selectedWindow();
+    state.robotType = selectedRobotType();
+    const wifiWindow = selectedWifiAnalysisWindow();
     const params = new URLSearchParams({
       hours: state.window.hours,
-      days: state.window.days
+      days: state.window.days,
+      robotType: state.robotType
     });
+    if (wifiWindow.isCustom) {
+      params.set('wifiStart', wifiWindow.start);
+      params.set('wifiEnd', wifiWindow.end);
+    }
     state.dashboard = await requestJson(`/api/dashboard?${params}`);
     renderDashboard(state.dashboard);
-    if (announce) showToast(`Refreshed: ${state.window.label}`);
+    if (announce) showToast(`Refreshed: ${robotTypeLabel()} · ${wifiRefreshLabel(wifiWindow)}`);
   } catch (error) {
     renderConnectionError(error);
     showToast(error.message, 'error');
@@ -308,20 +476,573 @@ async function loadDashboard({ announce = false } = {}) {
   }
 }
 
-async function syncCurrentSnapshot() {
-  if (state.loading) return;
-  setBusy(true, 'Synchronizing the current robot status...');
+function localInputDateTime(value) {
+  if (!value) return '';
+  const raw = String(value).trim().replace(' ', 'T');
+  const wallClock = raw.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?::(\d{2}))?/);
+  if (wallClock) return `${wallClock[1]}:${wallClock[2] || '00'}`;
+  return raw.slice(0, 19);
+}
+
+function formatTaskLocalDateTime(value) {
+  if (!value) return '--';
+  const raw = String(value).trim().replace(' ', 'T');
+  const wallClock = raw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!wallClock) return String(value);
+  const [, year, month, day, hour, minute, second = '00'] = wallClock;
+  return `${day}/${month}/${year}, ${hour}:${minute}:${second}`;
+}
+
+function taskWindowLabel(summary = {}) {
+  const start = formatTaskLocalDateTime(summary.analysis_start);
+  const end = formatTaskLocalDateTime(summary.analysis_end);
+  const requestedStart = formatTaskLocalDateTime(summary.requested_start);
+  const requestedEnd = formatTaskLocalDateTime(summary.requested_end);
+  const effectiveWindow = `${start} to ${end}`;
+  return requestedStart === start && requestedEnd === end
+    ? effectiveWindow
+    : `${effectiveWindow} (complete hours)`;
+}
+
+async function loadTaskAnalytics({ announce = false } = {}) {
+  const requestId = ++state.taskRequestId;
+  const analysisWindow = selectedWifiAnalysisWindow();
+  const start = analysisWindow.start || '';
+  const end = analysisWindow.end || '';
+  const params = new URLSearchParams();
+  if (start || end) {
+    if (!start || !end) {
+      showToast('Choose both task analytics start and end times', 'error');
+      return;
+    }
+    params.set('start', start);
+    params.set('end', end);
+  }
+  if (state.taskRobots.length) params.set('robots', state.taskRobots.join(','));
+
+  if (elements.taskApplyWindow) elements.taskApplyWindow.disabled = true;
+  if (elements.taskDataScope) elements.taskDataScope.textContent = 'Loading DWS task analytics…';
+  try {
+    const data = await requestJson(`/api/task-analytics${params.toString() ? `?${params}` : ''}`);
+    if (requestId !== state.taskRequestId) return;
+    state.taskAnalytics = data;
+    renderTaskAnalytics(data);
+    if (announce) showToast(`Task Analytics updated: ${taskWindowLabel(data.summary)}`);
+  } catch (error) {
+    if (requestId !== state.taskRequestId) return;
+    if (elements.taskDataScope) {
+      elements.taskDataScope.dataset.tone = 'critical';
+      elements.taskDataScope.textContent = error.message;
+    }
+    showToast(error.message, 'error');
+  } finally {
+    if (requestId === state.taskRequestId && elements.taskApplyWindow) elements.taskApplyWindow.disabled = false;
+  }
+}
+
+function taskRobotSelectionLabel(rows = []) {
+  if (!state.taskRobots.length) return `All robots (${rows.length})`;
+  if (state.taskRobots.length === 1) return state.taskRobots[0];
+  return `Selected ${state.taskRobots.length}`;
+}
+
+function updateTaskRobotPickerLabel(rows = []) {
+  if (!elements.taskRobotToggle) return;
+  elements.taskRobotToggle.textContent = taskRobotSelectionLabel(rows);
+}
+
+function populateTaskRobotSelector(rows) {
+  if (!elements.taskRobotMenu) return;
+  const availableCodes = rows.map((row) => String(row.robot_code || '').trim()).filter(Boolean);
+  const availableSet = new Set(availableCodes);
+  state.taskRobots = state.taskRobots.filter((code) => availableSet.has(code));
+  elements.taskRobotMenu.replaceChildren();
+
+  const actions = document.createElement('div');
+  actions.className = 'task-robot-menu-actions';
+  const selectAll = document.createElement('button');
+  selectAll.type = 'button';
+  selectAll.textContent = 'Select all';
+  selectAll.addEventListener('click', () => {
+    state.taskRobots = [...availableCodes];
+    populateTaskRobotSelector(rows);
+  });
+  const clearAll = document.createElement('button');
+  clearAll.type = 'button';
+  clearAll.textContent = 'Clear all';
+  clearAll.addEventListener('click', () => {
+    state.taskRobots = [];
+    populateTaskRobotSelector(rows);
+  });
+  actions.append(selectAll, clearAll);
+  elements.taskRobotMenu.append(actions);
+
+  availableCodes.forEach((robotCode) => {
+    const label = document.createElement('label');
+    label.className = 'task-robot-option';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = robotCode;
+    input.checked = state.taskRobots.includes(robotCode);
+    input.addEventListener('change', () => {
+      const selected = new Set(state.taskRobots);
+      if (input.checked) selected.add(robotCode);
+      else selected.delete(robotCode);
+      state.taskRobots = availableCodes.filter((code) => selected.has(code));
+      updateTaskRobotPickerLabel(rows);
+    });
+    const text = document.createElement('span');
+    text.textContent = robotCode;
+    label.append(input, text);
+    elements.taskRobotMenu.append(label);
+  });
+  updateTaskRobotPickerLabel(rows);
+}
+
+function renderTaskRanking(host, rows, valueKey, secondary) {
+  if (!host) return;
+  host.replaceChildren();
+  if (!rows.length) {
+    host.classList.add('empty-state');
+    host.textContent = 'No DWS records are available for the selected period and robot.';
+    return;
+  }
+  host.classList.remove('empty-state');
+  const maximum = Math.max(...rows.map((row) => asNumber(row[valueKey])), 1);
+  rows.forEach((row, index) => {
+    const item = document.createElement('div');
+    item.className = 'task-ranking-item';
+    const title = document.createElement('strong');
+    title.textContent = `${index + 1}. ${row.calling_box_label || row.task_label || '--'}`;
+    const detail = document.createElement('span');
+    detail.textContent = secondary(row);
+    const bar = document.createElement('i');
+    bar.style.width = `${Math.max(4, (100 * asNumber(row[valueKey])) / maximum)}%`;
+    const value = document.createElement('b');
+    value.textContent = formatNumber(row[valueKey]);
+    item.append(title, detail, bar, value);
+    host.append(item);
+  });
+}
+
+function renderTaskUsageTrend(host, rows = [], selectedRobots = []) {
+  if (!host) return;
+  host.replaceChildren();
+  const scopedRows = rows.filter((row) => row.stat_hour && row.robot_code);
+  if (!scopedRows.length) {
+    const empty = document.createElement('div');
+    empty.className = 'chart-empty';
+    empty.textContent = 'No hourly task evidence is available for the selected period.';
+    host.append(empty);
+    return;
+  }
+
+  const hourLabels = [...new Set(scopedRows.map((row) => row.stat_hour))].sort();
+  const uniqueRobots = [...new Set(scopedRows.map((row) => row.robot_code))].sort();
+  const splitByRobot = selectedRobots.length > 0 && selectedRobots.length <= 6;
+  const seriesMap = new Map();
+  if (splitByRobot) {
+    uniqueRobots.forEach((robotCode) => seriesMap.set(robotCode, new Map()));
+    scopedRows.forEach((row) => seriesMap.get(row.robot_code)?.set(row.stat_hour, asNumber(row.executing_seconds) / 60));
+  } else {
+    const aggregate = new Map();
+    scopedRows.forEach((row) => aggregate.set(row.stat_hour, (aggregate.get(row.stat_hour) || 0) + (asNumber(row.executing_seconds) / 60)));
+    seriesMap.set(selectedRobots.length > 6 ? 'Selected fleet' : 'All robots', aggregate);
+  }
+  const series = [...seriesMap.entries()].map(([name, values], index) => ({ name, values, color: ['#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2'][index % 6] }));
+  const allValues = series.flatMap((item) => hourLabels.map((label) => item.values.get(label) || 0));
+  const max = Math.max(...allValues, 1);
+  const width = 780; const height = 250;
+  const margin = { left: 48, right: 18, top: 16, bottom: 34 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const x = (index) => margin.left + (index / Math.max(hourLabels.length - 1, 1)) * plotWidth;
+  const y = (value) => margin.top + (1 - value / max) * plotHeight;
+  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'Hourly execution trend by robot, in minutes' });
+  [0, .5, 1].forEach((ratio) => {
+    const lineY = margin.top + ratio * plotHeight;
+    svg.append(svgElement('line', { x1: margin.left, y1: lineY, x2: width - margin.right, y2: lineY, class: 'chart-grid-line' }));
+    const axis = svgElement('text', { x: margin.left - 7, y: lineY + 4, 'text-anchor': 'end', class: 'chart-axis-label' });
+    axis.textContent = `${formatNumber(max * (1 - ratio), 0)}m`;
+    svg.append(axis);
+  });
+  series.forEach((item) => {
+    const points = hourLabels.map((label, index) => ({ x: x(index), y: y(item.values.get(label) || 0) }));
+    const line = svgElement('path', { d: buildMonotoneCurvePath(points), class: 'chart-line task-usage-line' });
+    line.style.stroke = item.color;
+    svg.append(line);
+    hourLabels.forEach((label, index) => {
+      if (index % Math.max(1, Math.ceil(hourLabels.length / 18)) !== 0 && index !== hourLabels.length - 1) return;
+      const point = svgElement('circle', { cx: x(index), cy: y(item.values.get(label) || 0), r: 2.2, stroke: item.color, class: 'chart-point' });
+      point.style.stroke = item.color;
+      const title = svgElement('title');
+      title.textContent = `${item.name} · ${formatShortTime(label)}: ${formatNumber(item.values.get(label) || 0, 1)} min`;
+      point.append(title);
+      svg.append(point);
+    });
+  });
+  const xTickCount = Math.min(7, hourLabels.length);
+  const xTickIndexes = [...new Set(Array.from({ length: xTickCount }, (_, index) => (
+    Math.round((index * (hourLabels.length - 1)) / Math.max(xTickCount - 1, 1))
+  )))];
+  xTickIndexes.forEach((index) => {
+    const tick = svgElement('text', {
+      x: x(index),
+      y: height - 8,
+      'text-anchor': index === 0 ? 'start' : (index === hourLabels.length - 1 ? 'end' : 'middle'),
+      class: 'chart-axis-label'
+    });
+    tick.textContent = formatShortTime(hourLabels[index]);
+    svg.append(tick);
+  });
+  host.append(svg);
+  const legend = document.createElement('div');
+  legend.className = 'task-chart-legend';
+  series.forEach((item) => {
+    const legendItem = document.createElement('span');
+    legendItem.innerHTML = `<i style="background:${item.color}"></i>${item.name}`;
+    legend.append(legendItem);
+  });
+  host.append(legend);
+}
+
+/*
+  Smooth cubic interpolation that remains monotone between adjacent hourly
+  values. The curve passes through every observed point without inventing an
+  overshoot between two zero-value hours.
+*/
+function buildMonotoneCurvePath(points = []) {
+  if (!points.length) return '';
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  const slopes = points.slice(0, -1).map((point, index) => {
+    const nextPoint = points[index + 1];
+    return (nextPoint.y - point.y) / (nextPoint.x - point.x);
+  });
+  const tangents = points.map((point, index) => {
+    if (index === 0) return slopes[0];
+    if (index === points.length - 1) return slopes[slopes.length - 1];
+    return slopes[index - 1] * slopes[index] <= 0
+      ? 0
+      : (2 * slopes[index - 1] * slopes[index]) / (slopes[index - 1] + slopes[index]);
+  });
+
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const point = points[index];
+    const nextPoint = points[index + 1];
+    const deltaX = (nextPoint.x - point.x) / 3;
+    path += ` C ${point.x + deltaX} ${point.y + tangents[index] * deltaX}`;
+    path += ` ${nextPoint.x - deltaX} ${nextPoint.y - tangents[index + 1] * deltaX}`;
+    path += ` ${nextPoint.x} ${nextPoint.y}`;
+  }
+  return path;
+}
+
+function renderTaskIdleTrend(host, rows = []) {
+  if (!host) return;
+  host.replaceChildren();
+  const byHour = new Map();
+  rows.forEach((row) => {
+    if (!row.stat_hour) return;
+    const idleMinutes = (asNumber(row.no_task_seconds) + asNumber(row.waiting_seconds) + asNumber(row.charging_seconds)) / 60;
+    byHour.set(row.stat_hour, (byHour.get(row.stat_hour) || 0) + idleMinutes);
+  });
+  const points = [...byHour.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([label, value]) => ({ label, value }));
+  if (!points.length) {
+    const empty = document.createElement('div');
+    empty.className = 'chart-empty';
+    empty.textContent = 'No hourly idle-time evidence is available for the selected period.';
+    host.append(empty);
+    return;
+  }
+  const width = 620; const height = 250;
+  const margin = { left: 48, right: 18, top: 16, bottom: 34 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const max = Math.max(...points.map((point) => point.value), 1);
+  const step = plotWidth / Math.max(points.length, 1);
+  const barWidth = Math.max(2, Math.min(18, step * .7));
+  const y = (value) => margin.top + (1 - value / max) * plotHeight;
+  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'Hourly idle time, in minutes' });
+  [0, .5, 1].forEach((ratio) => {
+    const lineY = margin.top + ratio * plotHeight;
+    svg.append(svgElement('line', { x1: margin.left, y1: lineY, x2: width - margin.right, y2: lineY, class: 'chart-grid-line' }));
+    const axis = svgElement('text', { x: margin.left - 7, y: lineY + 4, 'text-anchor': 'end', class: 'chart-axis-label' });
+    axis.textContent = `${formatNumber(max * (1 - ratio), 0)}m`;
+    svg.append(axis);
+  });
+  points.forEach((point, index) => {
+    const x = margin.left + index * step + (step - barWidth) / 2;
+    const rect = svgElement('rect', { x, y: y(point.value), width: barWidth, height: Math.max(1, margin.top + plotHeight - y(point.value)), rx: 2, fill: '#d97706' });
+    const title = svgElement('title');
+    title.textContent = `${formatShortTime(point.label)}: ${formatNumber(point.value, 1)} idle min`;
+    rect.append(title);
+    svg.append(rect);
+  });
+  const first = svgElement('text', { x: margin.left, y: height - 8, class: 'chart-axis-label' });
+  first.textContent = formatShortTime(points[0].label);
+  const last = svgElement('text', { x: width - margin.right, y: height - 8, 'text-anchor': 'end', class: 'chart-axis-label' });
+  last.textContent = formatShortTime(points[points.length - 1].label);
+  svg.append(first, last);
+  host.append(svg);
+}
+
+function renderTaskIdleCauses(summary) {
+  if (!elements.taskIdleCauseChart) return;
+  const causes = [
+    { label: 'No task', value: asNumber(summary.no_task_seconds), color: '#2563eb' },
+    { label: 'Waiting', value: asNumber(summary.waiting_seconds), color: '#d97706' },
+    { label: 'Charging', value: asNumber(summary.charging_seconds), color: '#059669' }
+  ];
+  const total = causes.reduce((sum, item) => sum + item.value, 0);
+  elements.taskIdleCauseChart.replaceChildren();
+  if (!total) {
+    elements.taskIdleCauseChart.classList.add('empty-state');
+    elements.taskIdleCauseChart.textContent = 'No confirmed idle-time evidence is available in this period.';
+    return;
+  }
+  elements.taskIdleCauseChart.classList.remove('empty-state');
+  let cursor = 0;
+  const segments = causes.map((item) => {
+    const end = cursor + (100 * item.value / total);
+    const segment = `${item.color} ${cursor}% ${end}%`;
+    cursor = end;
+    return segment;
+  });
+  const donut = document.createElement('div');
+  donut.className = 'task-idle-pie';
+  donut.style.background = `conic-gradient(${segments.join(', ')})`;
+  donut.setAttribute('role', 'img');
+  donut.setAttribute('aria-label', `Observed idle time: ${formatSeconds(total)}`);
+  const legend = document.createElement('div');
+  legend.className = 'task-idle-legend';
+  causes.forEach((item) => {
+    const row = document.createElement('div');
+    row.innerHTML = `<i style="background:${item.color}"></i><span>${item.label}</span><b>${formatSeconds(item.value)}</b>`;
+    legend.append(row);
+  });
+  elements.taskIdleCauseChart.append(donut, legend);
+}
+
+function taskExceptionFinding(type) {
+  const labels = {
+    FULL_NO_BATTERY_OR_TASK_EVIDENCE: 'No battery or task evidence',
+    FULL_TASK_EVENT_WITHOUT_BATTERY_EVIDENCE: 'Task evidence; battery state missing',
+    FULL_STATE_COVERAGE_GAP_UNRESOLVED: 'State coverage unresolved',
+    PARTIAL_STATE_COVERAGE_GAP: 'Partial state coverage gap'
+  };
+  return labels[type] || 'State coverage gap';
+}
+
+function renderTaskStateExceptionDetails(rows = [], totalAffectedRobotHours = 0) {
+  const panel = elements.taskStateExceptionPanel;
+  const body = elements.taskStateExceptionBody;
+  const summary = elements.taskStateExceptionSummary;
+  if (!panel || !body || !summary) return;
+
+  panel.hidden = rows.length === 0;
+  body.replaceChildren();
+  if (!rows.length) return;
+
+  summary.textContent = `Latest ${formatNumber(rows.length)} of ${formatNumber(totalAffectedRobotHours)} affected robot-hours`;
+  rows.forEach((row) => {
+    const tr = document.createElement('tr');
+    const robot = document.createElement('td');
+    robot.textContent = row.robot_code || '--';
+    const hour = document.createElement('td');
+    hour.textContent = formatTaskLocalDateTime(row.stat_hour);
+    const finding = document.createElement('td');
+    finding.textContent = `${taskExceptionFinding(row.exception_type)} (${formatSeconds(row.data_unavailable_seconds)})`;
+    const evidence = document.createElement('td');
+    evidence.textContent = `Battery ${formatNumber(row.battery_event_count)} / task ${formatNumber(row.task_event_count)}`;
+    const priorBattery = document.createElement('td');
+    priorBattery.textContent = formatTaskLocalDateTime(row.last_battery_event_time_before_hour);
+    tr.append(robot, hour, finding, evidence, priorBattery);
+    body.append(tr);
+  });
+}
+
+function renderLegacyTaskAnalytics(data) {
+  const summary = data.summary || {};
+  const topLimit = state.taskTopLimit;
+  const idleSeconds = asNumber(summary.no_task_seconds) + asNumber(summary.waiting_seconds) + asNumber(summary.charging_seconds);
+  const totalSeconds = asNumber(summary.executing_seconds) + idleSeconds + asNumber(summary.data_unavailable_seconds);
+  const unavailablePercent = totalSeconds > 0 ? (100 * asNumber(summary.data_unavailable_seconds) / totalSeconds) : 0;
+  const assignedTaskCount = asNumber(summary.queue_assigned_task_count);
+  const completedTaskCount = asNumber(summary.queue_completed_task_count);
+  const noClosedTaskEvidence = !summary.latest_source_event_time
+    && asNumber(summary.executing_seconds) === 0
+    && asNumber(summary.task_started_count) === 0
+    && asNumber(summary.task_completed_count) === 0;
+  populateTaskRobotSelector(data.robots || []);
+  if (elements.taskTopLimitSelect) elements.taskTopLimitSelect.value = String(topLimit);
+  elements.taskDataScope.dataset.tone = asNumber(summary.data_unavailable_seconds) > 0 ? 'warning' : 'ok';
+  elements.taskDataScope.textContent = `${taskWindowLabel(summary)} · ${formatNumber(summary.robot_count)} robots · TA_AMR + AMR_Queue via DWS · ${formatPercent(unavailablePercent)} coverage gap`;
+  elements.taskOnlineValue.textContent = 'Not available';
+  elements.taskOnlineDetail.textContent = 'Task activity is not online-state evidence';
+  elements.taskCompletedValue.textContent = formatNumber(completedTaskCount);
+  elements.taskCompletedDetail.textContent = `${formatNumber(assignedTaskCount)} assigned queues · terminal status completed`;
+  elements.taskEfficiencyValue.textContent = 'Not defined';
+  elements.taskEfficiencyDetail.textContent = 'No approved formula or full available-time denominator';
+  elements.taskWifiDisconnectValue.textContent = 'Not available';
+  elements.taskWifiDisconnectDetail.textContent = 'No WiFi disconnect event in Task DWS';
+  elements.taskDistanceValue.textContent = 'Not available';
+  elements.taskDistanceDetail.textContent = 'No route distance or odometer in the source tables';
+  const selectedRobotLabel = taskRobotSelectionLabel(data.robots || []);
+  elements.taskUsageSubtitle.textContent = noClosedTaskEvidence
+    ? `${selectedRobotLabel} · no closed task-event evidence in this selected period`
+    : `${selectedRobotLabel} · accepted queues ${formatNumber(summary.accepted_queue_count)} → task/subjob starts ${formatNumber(asNumber(summary.task_started_count) + asNumber(summary.subtask_started_count))} → top-level completions ${formatNumber(summary.task_completed_count)}`;
+  if (noClosedTaskEvidence) {
+    elements.taskUsageChart.replaceChildren();
+    const empty = document.createElement('div');
+    empty.className = 'chart-empty';
+    empty.textContent = 'No closed task-event evidence is available for an execution trend in this period.';
+    elements.taskUsageChart.append(empty);
+  } else {
+    renderTaskUsageTrend(elements.taskUsageChart, data.hourlyTrend || [], state.taskRobots);
+  }
+  renderTaskIdleTrend(elements.taskIdleTrendChart, data.hourlyTrend || []);
+  renderTaskIdleCauses(summary);
+  elements.taskCallingBoxTitle.textContent = `Top ${topLimit} Calling Boxes`;
+  elements.taskAssignedTitle.textContent = `Top ${topLimit} Assigned Tasks`;
+  renderTaskRanking(elements.taskCallingBoxList, (data.callingBoxes || []).slice(0, topLimit), 'calling_box_count', (row) => `${formatNumber(row.robot_count)} robots · latest ${formatTaskLocalDateTime(row.last_called_at)}`);
+  renderTaskRanking(elements.taskAssignedList, (data.assignedTasks || []).slice(0, topLimit), 'assigned_task_count', (row) => `${formatNumber(row.completed_task_count)} completed · ${formatNumber(row.robot_count)} robots`);
+}
+
+function renderTaskAnalytics(data) {
+  const summary = data.summary || {};
+  const topLimit = state.taskTopLimit;
+  const executionSeconds = asNumber(summary.executing_seconds);
+  const idleSeconds = asNumber(summary.no_task_seconds) + asNumber(summary.waiting_seconds) + asNumber(summary.charging_seconds);
+  const dataExceptionSeconds = asNumber(summary.data_unavailable_seconds);
+  const knownStateSeconds = executionSeconds + idleSeconds;
+  const totalSeconds = knownStateSeconds + dataExceptionSeconds;
+  const utilizationPercent = knownStateSeconds > 0 ? (100 * executionSeconds / knownStateSeconds) : null;
+  const unavailablePercent = totalSeconds > 0 ? (100 * dataExceptionSeconds / totalSeconds) : 0;
+  const dataGapRobotHours = asNumber(summary.data_gap_robot_hour_count);
+  const dataExceptionRobotHours = asNumber(summary.data_exception_robot_hour_count);
+  const dataExceptionRobots = asNumber(summary.data_exception_robot_count);
+
+  populateTaskRobotSelector(data.robots || []);
+  if (elements.taskTopLimitSelect) elements.taskTopLimitSelect.value = String(topLimit);
+
+  elements.taskDataScope.dataset.tone = dataExceptionRobotHours > 0 ? 'critical' : (dataExceptionSeconds > 0 ? 'warning' : 'ok');
+  elements.taskDataScope.textContent = dataExceptionRobotHours > 0
+    ? `Task window ${taskWindowLabel(summary)}. State data exception: ${formatNumber(dataExceptionRobotHours)} full robot-hours across ${formatNumber(dataExceptionRobots)} robots have no execution, charging, waiting, or no-task evidence. Utilization excludes all missing time.`
+    : dataExceptionSeconds > 0
+      ? `Task window ${taskWindowLabel(summary)}. State coverage gap: ${formatSeconds(dataExceptionSeconds)} is missing from ${formatNumber(dataGapRobotHours)} robot-hours. Each affected hour still has some state evidence; utilization excludes only the missing duration.`
+      : `DWS task state coverage is complete for ${formatNumber(summary.robot_count)} robots in ${taskWindowLabel(summary)}.`;
+
+  elements.taskUtilizationValue.textContent = utilizationPercent === null ? 'Not available' : formatPercent(utilizationPercent);
+  elements.taskUtilizationDetail.textContent = knownStateSeconds > 0
+    ? `Execution / ${formatSeconds(knownStateSeconds)} known state time`
+    : 'No confirmed state evidence';
+  elements.taskExecutionValue.textContent = formatSeconds(executionSeconds);
+  elements.taskExecutionDetail.textContent = `${formatNumber(summary.task_started_count)} task starts / ${formatNumber(summary.subtask_started_count)} subtask starts`;
+  elements.taskIdleValue.textContent = formatSeconds(idleSeconds);
+  elements.taskIdleDetail.textContent = `No task ${formatSeconds(summary.no_task_seconds)} / wait ${formatSeconds(summary.waiting_seconds)} / charge ${formatSeconds(summary.charging_seconds)}`;
+  elements.taskDataExceptionValue.textContent = dataExceptionRobotHours > 0
+    ? formatNumber(dataExceptionRobotHours)
+    : (dataExceptionSeconds > 0 ? 'Partial' : 'None');
+  elements.taskDataExceptionDetail.textContent = dataExceptionRobotHours > 0
+    ? `${formatNumber(dataExceptionRobots)} robots fully missing / ${formatPercent(unavailablePercent)} excluded`
+    : dataExceptionSeconds > 0
+      ? `${formatSeconds(dataExceptionSeconds)} partial gap / ${formatPercent(unavailablePercent)} excluded`
+      : 'All four state categories have evidence';
+  renderTaskStateExceptionDetails(data.stateExceptionDetails || [], dataGapRobotHours);
+
+  const selectedRobotLabel = taskRobotSelectionLabel(data.robots || []);
+  elements.taskUsageSubtitle.textContent = `${selectedRobotLabel} / queues accepted ${formatNumber(summary.accepted_queue_count)} / task starts ${formatNumber(summary.task_started_count)} / subtask starts ${formatNumber(summary.subtask_started_count)} / completed ${formatNumber(summary.task_completed_count)}`;
+  renderTaskUsageTrend(elements.taskUsageChart, data.hourlyTrend || [], state.taskRobots);
+  renderTaskIdleTrend(elements.taskIdleTrendChart, data.hourlyTrend || []);
+  renderTaskIdleCauses(summary);
+
+  elements.taskCallingBoxTitle.textContent = `Top ${topLimit} Calling Boxes`;
+  elements.taskAssignedTitle.textContent = `Top ${topLimit} Assigned Tasks`;
+  renderTaskRanking(
+    elements.taskCallingBoxList,
+    (data.callingBoxes || []).slice(0, topLimit),
+    'calling_box_count',
+    (row) => `${formatNumber(row.robot_count)} robots / latest ${formatTaskLocalDateTime(row.last_called_at)}`
+  );
+  renderTaskRanking(
+    elements.taskAssignedList,
+    (data.assignedTasks || []).slice(0, topLimit),
+    'assigned_task_count',
+    (row) => `${formatNumber(row.completed_task_count)} completed / ${formatNumber(row.robot_count)} robots`
+  );
+}
+
+function populateRobotProfileSelector(robots) {
+  const sorted = [...robots].sort((a, b) => robotIdentifier(a).localeCompare(robotIdentifier(b), 'en'));
+  const availableIds = new Set(sorted.map((robot) => String(robot.master_robot_id)));
+  if (!state.selectedRobotId || !availableIds.has(String(state.selectedRobotId))) {
+    state.selectedRobotId = sorted[0]?.master_robot_id == null ? null : String(sorted[0].master_robot_id);
+  }
+
+  elements.profileRobotSelect.replaceChildren();
+  if (!sorted.length) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'No enabled robots';
+    elements.profileRobotSelect.append(option);
+    elements.profileRobotSelect.disabled = true;
+    return;
+  }
+
+  sorted.forEach((robot) => {
+    const option = document.createElement('option');
+    option.value = String(robot.master_robot_id);
+    option.textContent = `${robotIdentifier(robot)} · Master ID ${robot.master_robot_id}`;
+    option.selected = option.value === String(state.selectedRobotId);
+    elements.profileRobotSelect.append(option);
+  });
+  elements.profileRobotSelect.disabled = false;
+}
+
+async function loadRobotProfile() {
+  if (!state.dashboard || !state.selectedRobotId) return;
+  const requestId = ++state.profileRequestId;
+  elements.profileRobotSelect.disabled = true;
+  elements.profileAlertBanner.dataset.tone = 'neutral';
+  elements.profileAlertBanner.querySelector('strong').textContent = 'Loading the selected robot profile...';
 
   try {
-    await requestJson('/api/sync/current', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-    setBusy(false);
-    showToast('Current status synchronized. Reloading the dashboard...');
-    await loadDashboard();
+    const params = new URLSearchParams({ hours: state.window.hours, days: state.window.days });
+    const profile = await requestJson(`/api/robot/${encodeURIComponent(state.selectedRobotId)}?${params}`);
+    if (requestId !== state.profileRequestId) return;
+    state.robotProfile = profile;
+    renderRobotProfile(profile);
+  } catch (error) {
+    if (requestId !== state.profileRequestId) return;
+    state.robotProfile = null;
+    elements.profileAlertBanner.dataset.tone = 'critical';
+    elements.profileAlertBanner.querySelector('strong').textContent = error.message;
+    showToast(error.message, 'error');
+  } finally {
+    if (requestId === state.profileRequestId) {
+      elements.profileRobotSelect.disabled = false;
+    }
+  }
+}
+
+async function refreshDwsData() {
+  if (state.loading) return;
+  setBusy(true, 'Reloading ODS, DWD, Task DWS, and leaderboard aggregates...');
+  try {
+    const result = await requestJson('/api/sync/dws', { method: 'POST' });
+    showToast(`DWS reload completed in ${formatNumber(result.elapsedSeconds || 0)} seconds`);
   } catch (error) {
     renderConnectionError(error);
     showToast(error.message, 'error');
+    return;
+  } finally {
     setBusy(false);
   }
+
+  await loadDashboard({ announce: true });
+  await loadTaskAnalytics({ announce: true });
 }
 
 function renderConnectionError(error) {
@@ -334,10 +1055,13 @@ function renderConnectionError(error) {
 function renderDashboard(data) {
   const summary = data.summary || {};
   const robots = data.robots || [];
+  populateRobotProfileSelector(robots);
   const attentionRobots = robots.filter(hasOperationalAlert);
   const lowBatteryRobots = robots.filter(isLowBattery);
   const noSignalRobots = robots.filter(isNoSignal);
+  const rssiMeasurementIssueRobots = robots.filter(hasRssiMeasurementIssue);
   const deviceAlarmRobots = robots.filter(hasAlarm);
+  const staleDataRobots = robots.filter(isRobotDataStale);
   const taskTotals = (data.jobTrend || []).reduce((totals, row) => ({
     completed: totals.completed + asNumber(row.completed_status_count),
     failed: totals.failed + asNumber(row.failed_status_count)
@@ -357,64 +1081,66 @@ function renderDashboard(data) {
     ? (Date.now() - latestLoad.getTime()) / 60000
     : Number.POSITIVE_INFINITY;
 
+  renderAnalysis(data.analysis, data.analysisReadiness, robots);
+  renderRunningWifiAnalysis(data.wifiRunningAnalysis || {});
+
   if (sourceAgeMinutes <= data.staleMinutes) {
-    elements.connectionStatus.textContent = 'DWS connected · Status data is current';
+    elements.connectionStatus.textContent = 'DWS non-snapshot data is current';
     elements.freshnessDot.className = 'status-dot ok';
   } else if (loadAgeMinutes <= data.staleMinutes) {
-    elements.connectionStatus.textContent = 'DWS snapshot current · Upstream status data is delayed';
+    elements.connectionStatus.textContent = `DWS loaded · Source data exceeds ${formatNumber(data.staleMinutes)} min`;
     elements.freshnessDot.className = 'status-dot stale';
   } else {
-    elements.connectionStatus.textContent = 'DWS available · Status data and snapshot are delayed';
+    elements.connectionStatus.textContent = `DWS refresh timeout · ${Number.isFinite(loadAgeMinutes) ? formatNumber(loadAgeMinutes) : '--'} min old`;
     elements.freshnessDot.className = 'status-dot stale';
   }
-  elements.sourceFreshness.textContent = formatDateTime(summary.source_anchor_time || summary.latest_source_event_time);
+  elements.sourceFreshness.textContent = formatDateTime(summary.latest_source_event_time);
   elements.sourceLag.textContent = summary.source_anchor_lag_minutes == null
     ? '--'
     : `${formatNumber(Math.max(0, asNumber(summary.source_anchor_lag_minutes)))} min`;
   elements.dwsFreshness.textContent = formatDateTime(summary.latest_dws_load_time);
   elements.wifiFreshness.textContent = formatDateTime(summary.wifi_anchor_time);
 
-  elements.metricTotal.textContent = `${formatNumber(summary.total_robot_count)} / ${formatNumber(summary.commissioned_robot_count)}`;
-  elements.metricTotalScope.textContent = `Enabled / commissioned · ${formatNumber(summary.snapshot_robot_count)} matched snapshots`;
-  elements.metricOnline.textContent = formatNumber(summary.online_robot_count);
-  elements.metricOffline.textContent = `Reported within ${formatNumber(data.onlineAnchorMinutes)} min · ${formatNumber(summary.offline_robot_count)} timed out · ${formatNumber(summary.missing_snapshot_robot_count)} missing snapshots`;
-  elements.metricJobs.textContent = formatNumber(summary.active_job_robot_count);
-  elements.metricJobScope.textContent = `Reported within ${formatNumber(data.onlineAnchorMinutes)} min · Working / Running`;
-  elements.metricTaskSuccess.textContent = taskSuccessRate == null ? '--' : formatPercent(taskSuccessRate, 1);
-  elements.metricTaskSuccessScope.textContent = `Queue outcomes · ${formatNumber(taskTotals.completed)} completed / ${formatNumber(taskTotals.failed)} unsuccessful`;
-  elements.metricBattery.textContent = summary.avg_battery_soc == null ? '--' : `${formatNumber(summary.avg_battery_soc, 1)}%`;
-  elements.metricLowBattery.textContent = `≤20%: ${formatNumber(summary.low_battery_robot_count)} · ${robotIdSummary(robots, isLowBattery, { prefix: 'IDs', limit: 3 })}`;
-  elements.metricRssi.textContent = summary.avg_current_rssi == null ? '--' : `${formatNumber(summary.avg_current_rssi, 1)} dBm`;
-  elements.metricWifiCoverage.textContent = `Reported in last 5 min: ${formatNumber(summary.wifi_current_robot_count)} / ${formatNumber(summary.active_robot_count)}`;
-  elements.metricZeroSignal.textContent = formatPercent(summary.zero_signal_rate, 2);
-  elements.metricZeroSignalScope.textContent = `Last ${formatNumber(summary.wifi_window_hours)} hours · ${formatNumber(summary.zero_signal_sample_count)} / ${formatNumber(summary.wifi_sample_count)} samples`;
-  elements.metricAlarms.textContent = formatNumber(attentionRobots.length);
-  elements.metricAlarmScope.textContent = `${formatNumber(lowBatteryRobots.length)} low battery · ${formatNumber(noSignalRobots.length)} no signal · ${formatNumber(deviceAlarmRobots.length)} device errors`;
-  elements.operationsOnlineValue.textContent = `${formatNumber(summary.online_robot_count)} robots`;
-  elements.operationsOfflineValue.textContent = `${formatNumber(summary.offline_robot_count)} robots`;
+  if (elements.metricTotal) {
+    elements.metricTotal.textContent = `${formatNumber(summary.total_robot_count)} / ${formatNumber(summary.commissioned_robot_count)}`;
+    elements.metricTotalScope.textContent = `Enabled / commissioned · ${formatNumber(summary.dws_known_robot_count)} found in non-snapshot DWS`;
+    elements.metricOnline.textContent = formatNumber(summary.current_data_robot_count);
+    elements.metricOffline.textContent = `Within ${formatNumber(data.staleMinutes)} min · ${formatNumber(summary.timed_out_robot_count)} timed out · ${formatNumber(summary.missing_data_robot_count)} missing`;
+    elements.metricJobs.textContent = '--';
+    elements.metricJobScope.textContent = 'Current task ID is not provided by DWS daily aggregates';
+    elements.metricTaskSuccess.textContent = taskSuccessRate == null ? '--' : formatPercent(taskSuccessRate, 1);
+    elements.metricTaskSuccessScope.textContent = `Queue outcomes · ${formatNumber(taskTotals.completed)} completed / ${formatNumber(taskTotals.failed)} unsuccessful`;
+    elements.metricBattery.textContent = summary.avg_battery_soc == null ? '--' : `${formatNumber(summary.avg_battery_soc, 1)}%`;
+    elements.metricLowBattery.textContent = `≤20%: ${formatNumber(summary.low_battery_robot_count)} · ${robotIdSummary(robots, isLowBattery, { prefix: 'IDs', limit: 3 })}`;
+    elements.metricRssi.textContent = summary.avg_current_rssi == null ? '--' : `${formatNumber(summary.avg_current_rssi, 1)} dBm`;
+    elements.metricWifiCoverage.textContent = `DWS current within ${formatNumber(data.staleMinutes)} min: ${formatNumber(summary.wifi_current_robot_count)} / ${formatNumber(summary.active_robot_count)}`;
+    elements.metricZeroSignal.textContent = '--';
+    elements.metricZeroSignalScope.textContent = 'Not measurable: DWS hourly WiFi does not retain AP or scan evidence';
+    elements.metricAlarms.textContent = formatNumber(attentionRobots.length);
+    elements.metricAlarmScope.textContent = `${formatNumber(staleDataRobots.length)} delayed · ${formatNumber(lowBatteryRobots.length)} low battery · ${formatNumber(noSignalRobots.length)} no signal · ${formatNumber(rssiMeasurementIssueRobots.length)} RSSI measurement issues · ${formatNumber(deviceAlarmRobots.length)} device errors`;
+  }
+  elements.operationsOnlineValue.textContent = `${formatNumber(summary.current_data_robot_count)} robots`;
+  elements.operationsOfflineValue.textContent = `${formatNumber(summary.timed_out_robot_count)} robots`;
   elements.operationsOfflineIds.textContent = robotIdSummary(robots, (robot) => normalizedOnlineStatus(robot.online_status) !== 'online');
-  elements.operationsActiveValue.textContent = `${formatNumber(summary.active_job_robot_count)} robots`;
-  elements.operationsActiveIds.textContent = robotIdSummary(robots, hasActiveJob);
+  elements.operationsActiveValue.textContent = 'Not available';
+  elements.operationsActiveIds.textContent = 'DWS daily aggregates do not contain current task IDs';
   elements.taskSuccessValue.textContent = taskSuccessRate == null ? '--' : formatPercent(taskSuccessRate, 1);
   elements.taskFailureValue.textContent = formatNumber(taskTotals.failed);
   elements.taskFailureSummary.textContent = taskFailureSummary(data.taskFailureOutcomes || []);
-  elements.taskActiveValue.textContent = `${formatNumber(summary.active_job_robot_count)} robots`;
-  elements.taskActiveIds.textContent = robotIdSummary(robots, hasActiveJob);
+  elements.taskActiveValue.textContent = 'Not available';
+  elements.taskActiveIds.textContent = 'Use historical DWS task totals only';
   elements.energyAverageValue.textContent = summary.avg_battery_soc == null ? '--' : `${formatNumber(summary.avg_battery_soc, 1)}%`;
   elements.energyLowBatteryValue.textContent = `${formatNumber(summary.low_battery_robot_count)} robots`;
   elements.energyLowBatteryIds.textContent = robotIdSummary(robots, isLowBattery);
-  elements.networkRssiValue.textContent = summary.avg_current_rssi == null ? '--' : `${formatNumber(summary.avg_current_rssi, 1)} dBm`;
-  elements.networkZeroValue.textContent = formatPercent(summary.zero_signal_rate, 2);
-  elements.networkCoverageValue.textContent = `${formatNumber(summary.wifi_current_robot_count)} / ${formatNumber(summary.active_robot_count)} robots`;
-  elements.networkStaleIds.textContent = robotIdSummary(robots, (robot) => !robot.wifi_is_current, { prefix: 'Not current' });
   elements.alarmRobotValue.textContent = `${formatNumber(attentionRobots.length)} robots`;
   elements.alarmRobotIds.textContent = robotIdSummary(robots, hasOperationalAlert);
   elements.alarmLowBatteryValue.textContent = `${formatNumber(lowBatteryRobots.length)} robots`;
   elements.alarmLowBatteryIds.textContent = robotIdSummary(robots, isLowBattery);
   elements.alarmNoSignalValue.textContent = `${formatNumber(noSignalRobots.length)} robots`;
   elements.alarmNoSignalIds.textContent = robotIdSummary(robots, isNoSignal);
-  elements.wifiWindowLabel.textContent = `Last ${formatNumber(summary.wifi_window_hours)} hours`;
-  elements.analysisWindowLabel.textContent = state.window.label;
+  elements.alarmRssiIssueValue.textContent = `${formatNumber(rssiMeasurementIssueRobots.length)} robots`;
+  elements.alarmRssiIssueIds.textContent = robotIdSummary(robots, hasRssiMeasurementIssue);
+  elements.analysisWindowLabel.textContent = `${robotTypeLabel()} · ${state.window.label}`;
   elements.batteryTrendAnchor.textContent = summary.battery_trend_anchor_time
     ? `Through ${formatShortTime(summary.battery_trend_anchor_time)}`
     : '%';
@@ -427,12 +1153,8 @@ function renderDashboard(data) {
   renderMap(robots);
   renderRobotVitals(robots);
   renderLowBatteryRisk(robots);
-  renderWifiRisk(data.wifiAccessPointRisk || []);
   renderLineChart(elements.batteryChart, data.batteryTrend, {
     valueKey: 'avg_battery_soc', labelKey: 'stat_hour', color: '#2563eb', suffix: '%', fixedRange: [0, 100]
-  });
-  renderLineChart(elements.wifiChart, data.wifiTrend, {
-    valueKey: 'avg_rssi', labelKey: 'stat_hour', color: '#7c3aed', suffix: ' dBm'
   });
   renderLineChart(elements.jobChart, data.jobTrend, {
     valueKey: 'job_count', labelKey: 'stat_date', color: '#059669', suffix: '', nonNegative: true
@@ -444,6 +1166,1710 @@ function renderDashboard(data) {
     valueKey: 'queue_count', labelKey: 'stat_date', color: '#d97706', suffix: '', nonNegative: true
   });
   renderBatches(data.recentBatches || []);
+  if (state.currentView === 'robot-profile') loadRobotProfile();
+}
+
+function textNode(tagName, className, value) {
+  const element = document.createElement(tagName);
+  if (className) element.className = className;
+  element.textContent = value;
+  return element;
+}
+
+function renderAnalysisBarChart(host, rows, options = {}) {
+  if (!host) return;
+  host.replaceChildren();
+
+  const validRows = rows.filter((row) => Number.isFinite(Number(row.value)));
+  if (!validRows.length) {
+    host.classList.add('empty-state');
+    host.textContent = options.emptyText || 'No supported data is available for this chart.';
+    return;
+  }
+
+  host.classList.remove('empty-state');
+  const observedMaximum = Math.max(...validRows.map((row) => Math.max(0, Number(row.value))));
+  const scaleMaximum = Math.max(
+    1,
+    Number(options.maxValue) || 0,
+    Number(options.referenceValue) || 0,
+    observedMaximum
+  );
+  const valueFormatter = options.valueFormatter || ((value) => formatNumber(value, 1));
+
+  validRows.forEach((row) => {
+    const numericValue = Math.max(0, Number(row.value));
+    const wrapper = document.createElement('div');
+    wrapper.className = 'analysis-bar-row';
+    wrapper.dataset.tone = row.tone || options.tone || 'blue';
+
+    const label = document.createElement('div');
+    label.className = 'analysis-bar-label';
+    const title = textNode('strong', '', row.label || '--');
+    title.title = row.fullLabel || row.label || '';
+    label.append(title);
+    if (row.detail) label.append(textNode('small', '', row.detail));
+
+    const track = document.createElement('div');
+    track.className = 'analysis-bar-track';
+    const fill = document.createElement('span');
+    fill.className = 'analysis-bar-fill';
+    fill.style.width = `${Math.min(100, (numericValue / scaleMaximum) * 100)}%`;
+    track.append(fill);
+
+    if (Number.isFinite(Number(options.referenceValue))) {
+      const reference = document.createElement('span');
+      reference.className = 'analysis-bar-reference';
+      reference.style.left = `${Math.min(100, (Number(options.referenceValue) / scaleMaximum) * 100)}%`;
+      reference.title = options.referenceLabel || `Reference: ${valueFormatter(options.referenceValue)}`;
+      track.append(reference);
+    }
+
+    wrapper.append(label, track, textNode('span', 'analysis-bar-value', valueFormatter(numericValue)));
+    host.append(wrapper);
+  });
+
+  if (options.note) host.append(textNode('div', 'analysis-chart-note', options.note));
+}
+
+function diagnosisChartLabel(diagnostic) {
+  const rules = diagnostic.ruleIds || [];
+  if (rules.includes('DWS_REFRESH_TIMEOUT')) return 'DWS refresh timeout';
+  if (rules.includes('DWS_SOURCE_LAG')) return 'DWS source-to-load lag';
+  if (rules.includes('DWS_SOURCE_TIMEOUT')) return 'Source data timeout';
+  if (rules.includes('DWS_STATUS_MISSING')) return 'DWS status data missing';
+  if (rules.includes('SOURCE_TELEMETRY_ALL_TOPICS_STOPPED')) return 'Upstream telemetry stopped';
+  if (rules.includes('BATTERY_LOW_NOT_CHARGING')) return 'Low battery, not charging';
+  if (rules.includes('WIFI_SIGNAL_CONFIRMED_LOST')) return 'Confirmed WiFi signal loss';
+  if (rules.includes('DEVICE_ERROR_REPORTED')) return 'Device-reported error';
+  return diagnostic.phenomenon || rules[0] || 'Operational review';
+}
+
+function workloadTone(classification) {
+  if (classification === 'CONCENTRATED') return 'warning';
+  if (classification === 'OBSERVED_IDLE_OR_INELIGIBLE') return 'blue';
+  if (classification === 'BALANCED') return 'healthy';
+  return 'muted';
+}
+
+function groupedDiagnostics(diagnostics = []) {
+  const groups = new Map();
+  diagnostics.forEach((diagnostic) => {
+    const key = `${diagnostic.diagnosis || ''}|${(diagnostic.ruleIds || []).join('|')}`;
+    const group = groups.get(key) || {
+      representative: diagnostic,
+      robots: [],
+      diagnostics: [],
+      severity: diagnostic.severity
+    };
+    group.robots.push(diagnostic.robotId);
+    group.diagnostics.push(diagnostic);
+    groups.set(key, group);
+  });
+
+  const severityRank = { CRITICAL: 3, WARNING: 2, WATCH: 1, INFO: 0 };
+  return [...groups.values()].sort((a, b) => {
+    const severityDifference = (severityRank[b.severity] || 0) - (severityRank[a.severity] || 0);
+    return severityDifference || b.robots.length - a.robots.length;
+  });
+}
+
+function renderFleetDonut(host, segments, total) {
+  host.replaceChildren();
+  host.classList.remove('empty-state');
+
+  const size = 190;
+  const center = size / 2;
+  const radius = 66;
+  const circumference = 2 * Math.PI * radius;
+  const svg = svgElement('svg', {
+    viewBox: `0 0 ${size} ${size}`,
+    role: 'img',
+    'aria-label': `Telemetry freshness for ${formatNumber(total)} robots`
+  });
+  svg.append(svgElement('circle', {
+    cx: center,
+    cy: center,
+    r: radius,
+    class: 'fleet-donut-track'
+  }));
+
+  let offset = 0;
+  segments.forEach((segment) => {
+    const fraction = total > 0 ? segment.value / total : 0;
+    const arc = svgElement('circle', {
+      cx: center,
+      cy: center,
+      r: radius,
+      class: 'fleet-donut-segment',
+      stroke: segment.color,
+      'stroke-dasharray': `${fraction * circumference} ${circumference}`,
+      'stroke-dashoffset': `${-offset * circumference}`
+    });
+    const title = svgElement('title');
+    title.textContent = `${segment.label}: ${formatNumber(segment.value)} robots`;
+    arc.append(title);
+    svg.append(arc);
+    offset += fraction;
+  });
+
+  const totalText = svgElement('text', {
+    x: center,
+    y: center - 2,
+    class: 'fleet-donut-total',
+    'text-anchor': 'middle'
+  });
+  totalText.textContent = formatNumber(total);
+  const labelText = svgElement('text', {
+    x: center,
+    y: center + 20,
+    class: 'fleet-donut-label',
+    'text-anchor': 'middle'
+  });
+  labelText.textContent = 'ROBOTS';
+  svg.append(totalText, labelText);
+
+  const legend = document.createElement('div');
+  legend.className = 'fleet-donut-legend';
+  segments.forEach((segment) => {
+    const item = document.createElement('div');
+    const swatch = document.createElement('span');
+    swatch.style.backgroundColor = segment.color;
+    item.append(swatch, textNode('b', '', segment.label), textNode('strong', '', formatNumber(segment.value)));
+    legend.append(item);
+  });
+  host.append(svg, legend);
+}
+
+function renderFleetStatusOverview(analysis, robots = []) {
+  if (!elements.fleetStatusDonut || !elements.fleetRobotGrid) return;
+
+  const statusCounts = { current: 0, delayed: 0, missing: 0 };
+  robots.forEach((robot) => {
+    const freshnessStatus = String(robot.data_freshness_status || '').trim().toUpperCase();
+    if (freshnessStatus === 'MISSING' || !freshnessStatus) statusCounts.missing += 1;
+    else if (freshnessStatus !== 'CURRENT') statusCounts.delayed += 1;
+    else statusCounts.current += 1;
+  });
+
+  renderFleetDonut(elements.fleetStatusDonut, [
+    { label: 'Current', value: statusCounts.current, color: '#2563eb' },
+    { label: 'Timed out', value: statusCounts.delayed, color: '#d97706' },
+    { label: 'Missing', value: statusCounts.missing, color: '#98a2b3' }
+  ], robots.length);
+
+  const diagnosticsByRobot = new Map(
+    (analysis?.priorityDiagnostics || []).map((diagnostic) => [String(diagnostic.masterRobotId), diagnostic])
+  );
+  elements.fleetRobotGrid.replaceChildren();
+  elements.fleetRobotGrid.classList.remove('empty-state');
+
+  [...robots]
+    .sort((a, b) => robotIdentifier(a).localeCompare(robotIdentifier(b), 'en'))
+    .forEach((robot) => {
+      const diagnostic = diagnosticsByRobot.get(String(robot.master_robot_id));
+      const freshnessStatus = String(robot.data_freshness_status || '').trim().toUpperCase();
+      const freshness = freshnessStatus === 'CURRENT'
+        ? 'current'
+        : freshnessStatus === 'MISSING' || !freshnessStatus
+          ? 'missing'
+          : 'delayed';
+      const freshnessLabel = {
+        CURRENT: 'DWS current',
+        DWS_REFRESH_TIMEOUT: 'DWS refresh timeout',
+        DWS_SOURCE_LAG: 'DWS source lag',
+        SOURCE_TIMEOUT: 'Source timeout',
+        MISSING: 'DWS data missing'
+      }[freshnessStatus] || 'DWS data missing';
+      const tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'fleet-robot-tile';
+      tile.dataset.tone = freshness;
+      tile.title = `${robotIdentifier(robot)} · ${freshnessLabel} · latest event ${formatDataAge(robot.status_event_time)}${diagnostic ? ` · ${diagnosisChartLabel(diagnostic)}` : ''}`;
+      tile.setAttribute('aria-label', tile.title);
+
+      const identity = document.createElement('span');
+      identity.append(textNode('i', 'fleet-status-dot', ''), textNode('strong', '', robotIdentifier(robot)));
+      tile.append(identity, textNode('small', '', freshnessLabel));
+      tile.addEventListener('click', () => selectRobotProfile(String(robot.master_robot_id)));
+      elements.fleetRobotGrid.append(tile);
+    });
+}
+
+function renderPriorityRepair(analysis) {
+  if (!elements.priorityRepairSummary) return;
+  const groups = groupedDiagnostics(analysis?.priorityDiagnostics || []);
+  elements.priorityRepairSummary.replaceChildren();
+
+  if (!groups.length) {
+    elements.priorityRepairSummary.className = 'priority-repair-summary empty-state';
+    elements.priorityRepairSummary.textContent = 'No current transparent-rule diagnosis requires maintenance.';
+    return;
+  }
+
+  const group = groups[0];
+  const diagnostic = group.representative;
+  elements.priorityRepairSummary.className = 'priority-repair-summary';
+
+  const heading = document.createElement('div');
+  heading.className = 'repair-focus-heading';
+  const titleGroup = document.createElement('div');
+  titleGroup.append(
+    textNode('span', 'repair-count', `${formatNumber(group.robots.length)} robots affected`),
+    textNode('h4', '', diagnosisChartLabel(diagnostic))
+  );
+  const confidence = textNode(
+    'span',
+    `confidence-pill confidence-${String(diagnostic.confidence || '').toLowerCase()}`,
+    `${diagnostic.confidence || '--'} evidence`
+  );
+  heading.append(titleGroup, confidence);
+
+  const affected = document.createElement('div');
+  affected.className = 'repair-robot-list';
+  group.robots.slice(0, 8).forEach((robotId) => affected.append(textNode('span', '', robotId)));
+  if (group.robots.length > 8) affected.append(textNode('span', '', `+${group.robots.length - 8}`));
+
+  const actionList = document.createElement('ol');
+  actionList.className = 'repair-action-list';
+  (diagnostic.recommendedActions || []).slice(0, 3).forEach((action) => actionList.append(textNode('li', '', action)));
+
+  const footer = document.createElement('div');
+  footer.className = 'repair-rule-footer';
+  footer.append(
+    textNode('span', '', `Rule: ${(diagnostic.ruleIds || []).join(', ') || '--'}`),
+    textNode('span', '', 'Physical confirmation is still required')
+  );
+  elements.priorityRepairSummary.append(heading, affected, actionList, footer);
+}
+
+function renderAnalysisVisuals(analysis) {
+  const diagnostics = analysis.priorityDiagnostics || [];
+  const workload = analysis.workload || {};
+  const operational = analysis.operationalMetrics || {};
+
+  const diagnosisRows = groupedDiagnostics(diagnostics)
+    .map((group) => ({
+      label: diagnosisChartLabel(group.representative),
+      fullLabel: group.representative.diagnosis,
+      detail: `${group.robots.slice(0, 3).join(', ')}${group.robots.length > 3 ? ` +${group.robots.length - 3}` : ''}`,
+      value: group.robots.length,
+      tone: group.severity === 'CRITICAL' ? 'critical' : 'warning'
+    }));
+  renderAnalysisBarChart(elements.diagnosisCauseChart, diagnosisRows, {
+    valueFormatter: (value) => `${formatNumber(value)} robot${value === 1 ? '' : 's'}`,
+    note: 'Counts use each robot’s strongest current transparent-rule diagnosis; they are not independent alarm-event totals.'
+  });
+
+  const workloadRows = workload.perRobot || [];
+  const topActive = workloadRows
+    .filter((row) => asNumber(row.assignedTaskCount) > 0)
+    .sort((a, b) => asNumber(b.assignedTaskCount) - asNumber(a.assignedTaskCount))
+    .slice(0, 6);
+  const visibleExceptions = workloadRows.filter((row) => [
+    'OBSERVED_IDLE_OR_INELIGIBLE',
+    'CURRENT_ERROR_NO_TASK',
+    'CURRENTLY_CHARGING_NO_TASK'
+  ].includes(row.classification));
+  const workloadSelection = new Map();
+  [...topActive, ...visibleExceptions].forEach((row) => workloadSelection.set(String(row.masterRobotId), row));
+  renderAnalysisBarChart(
+    elements.workloadDistributionChart,
+    [...workloadSelection.values()].map((row) => ({
+      label: row.robotId,
+      detail: String(row.classification || '').replaceAll('_', ' ').toLowerCase(),
+      value: asNumber(row.assignedTaskCount),
+      tone: workloadTone(row.classification)
+    })),
+    {
+      valueFormatter: (value) => `${formatNumber(value)} tasks`,
+      note: 'Shows the six highest-volume robots plus currently observable zero-task exceptions. The full fleet classification remains available below.'
+    }
+  );
+
+  const timingRows = (operational.taskTiming?.perRobot || [])
+    .filter((row) => asNumber(row.durationReferenceCount) > 0)
+    .map((row) => ({
+      label: row.robot_code || String(row.master_robot_id),
+      detail: `${formatNumber(row.onTimeCount)} / ${formatNumber(row.durationReferenceCount)} referenced`,
+      value: (asNumber(row.onTimeCount) / asNumber(row.durationReferenceCount)) * 100,
+      tone: ((asNumber(row.onTimeCount) / asNumber(row.durationReferenceCount)) * 100) >= 90 ? 'healthy' : 'warning'
+    }))
+    .sort((a, b) => b.value - a.value);
+  renderAnalysisBarChart(elements.onTimeRateChart, timingRows, {
+    maxValue: 100,
+    referenceValue: 90,
+    referenceLabel: 'Target reference: 90%',
+    valueFormatter: (value) => formatPercent(value, 1),
+    note: 'The configured duration-limit unit is still treated as an explicit assumption.'
+  });
+
+  const queueRows = (operational.queueWait?.perRobot || [])
+    .map((row) => ({
+      label: row.robot_code || String(row.master_robot_id),
+      detail: `${formatNumber(row.linkedQueueCount)} linked tasks`,
+      value: asNumber(row.avgQueueWaitSeconds),
+      tone: asNumber(row.avgQueueWaitSeconds) > 300 ? 'warning' : 'blue'
+    }))
+    .sort((a, b) => b.value - a.value);
+  renderAnalysisBarChart(elements.queueWaitAnalysisChart, queueRows, {
+    referenceValue: 300,
+    referenceLabel: 'Review reference: 300 seconds',
+    valueFormatter: (value) => formatSeconds(value),
+    note: 'Wait is derived from AMR_Queue.enqueued_at to the linked TA_AMR.start_time.'
+  });
+
+  const batteryRows = (operational.batteryAbove60?.perRobot || [])
+    .map((row) => ({
+      label: row.robot_code || String(row.master_robot_id),
+      detail: `${formatPercent(row.windowCoveragePercent, 0)} telemetry coverage`,
+      value: asNumber(row.above60TimeSharePercent),
+      tone: asNumber(row.windowCoveragePercent) >= 80 ? 'violet' : 'muted'
+    }))
+    .sort((a, b) => b.value - a.value);
+  renderAnalysisBarChart(elements.batteryCoverageAnalysisChart, batteryRows, {
+    maxValue: 100,
+    valueFormatter: (value) => formatPercent(value, 1),
+    note: 'Intervals longer than five minutes are excluded; muted bars have less than 80% window coverage.'
+  });
+}
+
+function renderAnalysis(analysis, readiness = {}, robots = []) {
+  if (!analysis) {
+    elements.analysisHeadline.textContent = 'Analysis is unavailable';
+    elements.analysisSummary.textContent = 'The monitoring data loaded, but the transparent rule result is missing.';
+    elements.analysisVerdict.dataset.severity = 'WARNING';
+    return;
+  }
+
+  const assessment = analysis.fleetAssessment || {};
+  const diagnostics = analysis.priorityDiagnostics || [];
+  const quality = analysis.dataQuality || {};
+  const gaps = analysis.measurementGaps || [];
+  const unavailableGapCount = gaps.filter((gap) => gap.status === 'NOT_MEASURABLE').length;
+  const diagnosticGroups = groupedDiagnostics(diagnostics);
+  const topDiagnosticGroup = diagnosticGroups[0];
+  const reviewedRobotCount = new Set(diagnostics.map((diagnostic) => String(diagnostic.masterRobotId))).size;
+
+  elements.analysisVerdict.dataset.severity = assessment.severity || 'INFO';
+  elements.analysisHeadline.textContent = reviewedRobotCount
+    ? `${formatNumber(reviewedRobotCount)} robots need rule review`
+    : 'No current transparent-rule alert';
+  elements.analysisSummary.textContent = topDiagnosticGroup
+    ? `Top cause: ${diagnosisChartLabel(topDiagnosticGroup.representative)} · ${formatNumber(topDiagnosticGroup.robots.length)} robots`
+    : 'No rule-backed maintenance action is required from the current evidence.';
+  elements.analysisSummary.title = assessment.summary || '';
+  elements.analysisConfidence.textContent = `Evidence coverage: ${assessment.confidence || '--'}`;
+  elements.analysisRuleVersion.textContent = `Transparent rules: ${analysis.ruleVersion || '--'}`;
+  elements.analysisRobotCount.textContent = formatNumber(reviewedRobotCount);
+  elements.analysisCoverage.textContent = formatPercent(quality.statusCoveragePercent, 1);
+  elements.analysisCoverageDetail.textContent = `${formatNumber(quality.statusCoverageRobotCount)} / ${formatNumber(quality.totalRobotCount)} robots have status-history samples`;
+  elements.analysisGapCount.textContent = formatNumber(unavailableGapCount);
+  renderFleetStatusOverview(analysis, robots);
+  renderPriorityRepair(analysis);
+}
+
+function aggregateRunningWifiTrend(rows, selectedPoi, selectedRobot) {
+  const buckets = new Map();
+  rows
+    .filter((row) => (
+      (selectedPoi === 'ALL' || String(row.poi_target) === selectedPoi)
+      && (selectedRobot === 'ALL' || String(row.robot_code) === selectedRobot)
+    ))
+    .forEach((row) => {
+      const key = String(row.bucket_start || '');
+      if (!key) return;
+      const bucket = buckets.get(key) || {
+        bucket_start: row.bucket_start,
+        weightedSignalTotal: 0,
+        valid_signal_sample_count: 0,
+        zero_signal_sample_count: 0,
+        sample_count: 0,
+        minimum_valid_rssi: null
+      };
+      const validCount = asNumber(row.valid_signal_sample_count);
+      const average = Number(row.average_valid_rssi);
+      if (validCount > 0 && Number.isFinite(average)) {
+        bucket.weightedSignalTotal += average * validCount;
+        bucket.valid_signal_sample_count += validCount;
+      }
+      bucket.zero_signal_sample_count += asNumber(row.zero_signal_sample_count);
+      bucket.sample_count += asNumber(row.sample_count);
+      const minimum = Number(row.minimum_valid_rssi);
+      if (Number.isFinite(minimum)) {
+        bucket.minimum_valid_rssi = bucket.minimum_valid_rssi == null
+          ? minimum
+          : Math.min(bucket.minimum_valid_rssi, minimum);
+      }
+      buckets.set(key, bucket);
+    });
+
+  return [...buckets.values()]
+    .map((bucket) => ({
+      ...bucket,
+      average_valid_rssi: bucket.valid_signal_sample_count > 0
+        ? bucket.weightedSignalTotal / bucket.valid_signal_sample_count
+        : null
+    }))
+    .sort((a, b) => new Date(a.bucket_start) - new Date(b.bucket_start));
+}
+
+function renderRunningWifiTrend(host, rows) {
+  host.replaceChildren();
+  host.classList.remove('empty-state');
+  const points = rows.filter((row) => Number.isFinite(Number(row.average_valid_rssi)));
+
+  if (!points.length) {
+    host.classList.add('empty-state');
+    host.textContent = 'No negative RSSI samples can be plotted for the selected filters.';
+    return;
+  }
+
+  if (points.length < 4) {
+    const sparse = document.createElement('div');
+    sparse.className = 'running-wifi-sparse';
+    points.forEach((point) => {
+      const item = document.createElement('div');
+      item.append(
+        textNode('span', '', formatShortTime(point.bucket_start)),
+        textNode('strong', '', `${formatNumber(point.average_valid_rssi, 1)} dBm`),
+        textNode('small', '', `${formatNumber(point.sample_count)} samples`)
+      );
+      sparse.append(item);
+    });
+    host.append(sparse);
+    return;
+  }
+
+  const width = 760;
+  const height = 286;
+  const margin = { left: 56, right: 22, top: 16, bottom: 42 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const values = points.flatMap((point) => [
+    Number(point.average_valid_rssi),
+    Number(point.minimum_valid_rssi)
+  ]).filter(Number.isFinite);
+  const observedMin = Math.min(...values);
+  const observedMax = Math.max(...values);
+  const min = Math.floor((observedMin - 4) / 5) * 5;
+  const max = Math.ceil((observedMax + 4) / 5) * 5;
+  const x = (index) => margin.left + (index / Math.max(points.length - 1, 1)) * plotWidth;
+  const y = (value) => margin.top + (1 - (value - min) / (max - min || 1)) * plotHeight;
+  const svg = svgElement('svg', {
+    viewBox: `0 0 ${width} ${height}`,
+    role: 'img',
+    'aria-label': 'Average and minimum WiFi RSSI trend during Running tasks'
+  });
+
+  [0, 0.25, 0.5, 0.75, 1].forEach((ratio) => {
+    const lineY = margin.top + ratio * plotHeight;
+    svg.append(svgElement('line', {
+      x1: margin.left,
+      y1: lineY,
+      x2: width - margin.right,
+      y2: lineY,
+      class: 'running-wifi-grid-line'
+    }));
+    const label = svgElement('text', {
+      x: margin.left - 9,
+      y: lineY + 4,
+      'text-anchor': 'end',
+      class: 'running-wifi-axis-label'
+    });
+    label.textContent = `${formatNumber(max - ratio * (max - min), 0)}`;
+    svg.append(label);
+  });
+
+  const averagePath = points
+    .map((point, index) => `${index ? 'L' : 'M'} ${x(index)} ${y(Number(point.average_valid_rssi))}`)
+    .join(' ');
+  const minimumPath = points
+    .filter((point) => Number.isFinite(Number(point.minimum_valid_rssi)))
+    .map((point) => {
+      const index = points.indexOf(point);
+      return `${index ? 'L' : 'M'} ${x(index)} ${y(Number(point.minimum_valid_rssi))}`;
+    })
+    .join(' ');
+  svg.append(svgElement('path', { d: minimumPath, class: 'running-wifi-line minimum' }));
+  svg.append(svgElement('path', { d: averagePath, class: 'running-wifi-line average' }));
+
+  const markerInterval = Math.max(1, Math.ceil(points.length / 24));
+  points.forEach((point, index) => {
+    if (index % markerInterval === 0 || index === points.length - 1) {
+      const averagePoint = svgElement('circle', {
+        cx: x(index),
+        cy: y(Number(point.average_valid_rssi)),
+        r: 3,
+        class: 'running-wifi-point average'
+      });
+      const title = svgElement('title');
+      title.textContent = `${formatDateTime(point.bucket_start)} · Average ${formatNumber(point.average_valid_rssi, 1)} dBm · Minimum ${formatNumber(point.minimum_valid_rssi, 1)} dBm · ${formatNumber(point.sample_count)} samples`;
+      averagePoint.append(title);
+      svg.append(averagePoint);
+    }
+    if (asNumber(point.zero_signal_sample_count) > 0) {
+      const zeroMarker = svgElement('path', {
+        d: `M ${x(index) - 5} ${height - margin.bottom + 4} L ${x(index) + 5} ${height - margin.bottom + 4} L ${x(index)} ${height - margin.bottom - 5} Z`,
+        class: 'running-wifi-zero-marker'
+      });
+      const title = svgElement('title');
+      title.textContent = `${formatDateTime(point.bucket_start)} · ${formatNumber(point.zero_signal_sample_count)} zero-signal samples`;
+      zeroMarker.append(title);
+      svg.append(zeroMarker);
+    }
+  });
+
+  const firstLabel = svgElement('text', {
+    x: margin.left,
+    y: height - 12,
+    class: 'running-wifi-axis-label'
+  });
+  firstLabel.textContent = formatShortTime(points[0].bucket_start);
+  const lastLabel = svgElement('text', {
+    x: width - margin.right,
+    y: height - 12,
+    'text-anchor': 'end',
+    class: 'running-wifi-axis-label'
+  });
+  lastLabel.textContent = formatShortTime(points[points.length - 1].bucket_start);
+  svg.append(firstLabel, lastLabel);
+  host.append(svg);
+}
+
+const WIFI_POINT_LINE_STYLES = [
+  { color: '#2563eb', dash: '' },
+  { color: '#7c3aed', dash: '8 4' },
+  { color: '#d97706', dash: '3 4' },
+  { color: '#059669', dash: '10 4 2 4' },
+  { color: '#db2777', dash: '6 3' },
+  { color: '#0891b2', dash: '2 3' },
+  { color: '#9333ea', dash: '12 4' },
+  { color: '#4d7c0f', dash: '7 3 2 3' },
+  { color: '#c2410c', dash: '4 3' },
+  { color: '#475569', dash: '10 3' }
+];
+
+function wifiPointLineStyle(index) {
+  return WIFI_POINT_LINE_STYLES[index % WIFI_POINT_LINE_STYLES.length];
+}
+
+function renderWifiPointLineChart(host, rows, selectedRobots, availableRobots) {
+  host.replaceChildren();
+  const selected = new Set(selectedRobots);
+  const validRows = rows.filter((row) => (
+    selected.has(String(row.robot_code))
+    && row.poi_target
+    && Number.isFinite(Number(row.average_valid_rssi))
+  ));
+
+  if (!selectedRobots.length) {
+    host.classList.add('empty-state');
+    host.textContent = 'No selected robot has plottable target-POI signal data in this time range.';
+    return;
+  }
+  if (!validRows.length) {
+    host.classList.add('empty-state');
+    host.textContent = 'The selected robots have no plottable target-POI signal data in this time range.';
+    return;
+  }
+
+  host.classList.remove('empty-state');
+  const rowsByRobot = new Map();
+  validRows.forEach((row) => {
+    const robotCode = String(row.robot_code);
+    if (!rowsByRobot.has(robotCode)) rowsByRobot.set(robotCode, []);
+    rowsByRobot.get(robotCode).push(row);
+  });
+
+  const chartList = document.createElement('div');
+  chartList.className = 'wifi-point-small-multiples';
+
+  selectedRobots.forEach((robotCode) => {
+    const robotRows = (rowsByRobot.get(robotCode) || [])
+      .sort((a, b) => String(a.poi_target).localeCompare(String(b.poi_target), 'en', { numeric: true }));
+    if (!robotRows.length) return;
+
+    const styleIndex = Math.max(0, availableRobots.indexOf(robotCode));
+    const style = wifiPointLineStyle(styleIndex);
+    const sampleCount = robotRows.reduce((total, row) => total + asNumber(row.sample_count), 0);
+    const weightedRssi = sampleCount
+      ? robotRows.reduce(
+        (total, row) => total + Number(row.average_valid_rssi) * asNumber(row.sample_count),
+        0
+      ) / sampleCount
+      : null;
+
+    const card = document.createElement('article');
+    card.className = 'wifi-point-robot-chart';
+    card.style.setProperty('--robot-series-color', style.color);
+
+    const header = document.createElement('header');
+    header.className = 'wifi-point-robot-chart-header';
+    const heading = document.createElement('div');
+    heading.className = 'wifi-point-robot-chart-heading';
+    const swatch = document.createElement('i');
+    const headingText = document.createElement('div');
+    headingText.append(
+      textNode('h4', '', robotCode),
+      textNode('p', '', `${formatNumber(robotRows.length)} observed target POIs · ${formatNumber(sampleCount)} strict matched samples`)
+    );
+    heading.append(swatch, headingText);
+    const metric = document.createElement('div');
+    metric.className = 'wifi-point-robot-chart-metric';
+    metric.append(
+      textNode('strong', '', `${formatNumber(weightedRssi, 1)} dBm`),
+      textNode('span', '', 'Sample-weighted average')
+    );
+    header.append(heading, metric);
+    card.append(header);
+
+    const scaleMin = -90;
+    const scaleMax = -30;
+    const margin = { left: 62, right: 34, top: 28, bottom: 92 };
+    const pointStep = 68;
+    const width = Math.max(900, margin.left + margin.right + Math.max(robotRows.length - 1, 1) * pointStep);
+    const height = 340;
+    const plotWidth = width - margin.left - margin.right;
+    const plotHeight = height - margin.top - margin.bottom;
+    const x = (index) => robotRows.length === 1
+      ? margin.left + plotWidth / 2
+      : margin.left + (index / (robotRows.length - 1)) * plotWidth;
+    const y = (value) => margin.top + (1 - (Number(value) - scaleMin) / (scaleMax - scaleMin)) * plotHeight;
+    const svg = svgElement('svg', {
+      viewBox: `0 0 ${width} ${height}`,
+      width,
+      height,
+      role: 'img',
+      'aria-label': `${robotCode} average WiFi RSSI line chart by observed target POI`
+    });
+
+    for (let tick = scaleMin; tick <= scaleMax; tick += 10) {
+      const tickY = y(tick);
+      svg.append(svgElement('line', {
+        x1: margin.left,
+        y1: tickY,
+        x2: width - margin.right,
+        y2: tickY,
+        class: 'wifi-point-line-grid'
+      }));
+      const label = svgElement('text', {
+        x: margin.left - 10,
+        y: tickY + 4,
+        'text-anchor': 'end',
+        class: 'wifi-point-line-axis'
+      });
+      label.textContent = tick;
+      svg.append(label);
+    }
+
+    const unit = svgElement('text', {
+      x: margin.left,
+      y: 16,
+      class: 'wifi-point-line-unit'
+    });
+    unit.textContent = 'RSSI (dBm)';
+    svg.append(unit);
+
+    const points = robotRows.map((row, index) => {
+      const pointName = String(row.poi_target);
+      const pointX = x(index);
+      const pointY = y(row.average_valid_rssi);
+      const label = svgElement('text', {
+        x: pointX,
+        y: height - margin.bottom + 22,
+        transform: `rotate(-48 ${pointX} ${height - margin.bottom + 22})`,
+        'text-anchor': 'end',
+        class: 'wifi-point-line-x-label'
+      });
+      label.textContent = pointName;
+      svg.append(label);
+      return { x: pointX, y: pointY, row, pointName };
+    });
+
+    if (points.length >= 2) {
+      const path = points
+        .map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`)
+        .join(' ');
+      svg.append(svgElement('path', {
+        d: path,
+        fill: 'none',
+        stroke: style.color,
+        'stroke-width': 2.5,
+        class: 'wifi-point-series-line'
+      }));
+    }
+
+    points.forEach((point) => {
+      const marker = svgElement('circle', {
+        cx: point.x,
+        cy: point.y,
+        r: 4,
+        fill: '#fff',
+        stroke: style.color,
+        'stroke-width': 2.4,
+        class: 'wifi-point-series-marker'
+      });
+      const title = svgElement('title');
+      title.textContent = `${robotCode} · ${point.pointName} · Average ${formatNumber(point.row.average_valid_rssi, 1)} dBm · Minimum ${formatNumber(point.row.minimum_valid_rssi, 1)} dBm · Maximum ${formatNumber(point.row.maximum_valid_rssi, 1)} dBm · ${formatNumber(point.row.sample_count)} samples`;
+      marker.append(title);
+      svg.append(marker);
+
+      if (robotRows.length <= 18) {
+        const valueLabel = svgElement('text', {
+          x: point.x,
+          y: point.y - 9,
+          'text-anchor': 'middle',
+          fill: style.color,
+          class: 'wifi-point-series-value'
+        });
+        valueLabel.textContent = formatNumber(point.row.average_valid_rssi, 0);
+        svg.append(valueLabel);
+      }
+    });
+
+    const chartScroll = document.createElement('div');
+    chartScroll.className = 'wifi-point-line-scroll';
+    chartScroll.append(svg);
+    card.append(chartScroll);
+    chartList.append(card);
+  });
+
+  host.append(chartList);
+}
+
+function renderWifiPointComparison(payload) {
+  const availableRobots = (payload.byRobot || [])
+    .map((row) => String(row.robot_code))
+    .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+  const selectedRobots = state.selectedWifiRobot === 'ALL'
+    ? availableRobots
+    : availableRobots.filter((robotCode) => robotCode === state.selectedWifiRobot);
+  const selected = new Set(selectedRobots);
+  const rows = (payload.byRobotTarget || []).filter((row) => selected.has(String(row.robot_code)));
+  const sampleCount = rows.reduce((total, row) => total + asNumber(row.sample_count), 0);
+  const scopeLabel = state.selectedWifiRobot === 'ALL' ? 'All eligible robots' : state.selectedWifiRobot;
+  elements.wifiPointStrengthSubtitle.textContent = `${scopeLabel} · ${formatNumber(selectedRobots.length)} robots · ${formatNumber(rows.length)} robot-target POI pairs · ${formatNumber(sampleCount)} strict matched samples · one chart per robot`;
+  renderWifiPointLineChart(
+    elements.wifiPointStrengthChart,
+    payload.byRobotTarget || [],
+    selectedRobots,
+    availableRobots
+  );
+}
+
+function weakSignalRowsForScope(payload, selectedRobot, selectedPoi) {
+  const sourceRows = selectedPoi === 'ALL'
+    ? (payload.byRobot || [])
+    : (payload.byRobotTarget || []).filter((row) => String(row.poi_target) === selectedPoi);
+  return sourceRows
+    .filter((row) => selectedRobot === 'ALL' || String(row.robot_code) === selectedRobot)
+    .filter((row) => asNumber(row.valid_signal_sample_count) > 0);
+}
+
+function aggregateWeakSignalTimeline(rows, selectedRobot, selectedPoi) {
+  const buckets = new Map();
+  rows
+    .filter((row) => (
+      (selectedRobot === 'ALL' || String(row.robot_code) === selectedRobot)
+      && (selectedPoi === 'ALL' || String(row.poi_target) === selectedPoi)
+    ))
+    .forEach((row) => {
+      const key = String(row.bucket_start || '');
+      if (!key) return;
+      const bucket = buckets.get(key) || {
+        bucket_start: row.bucket_start,
+        weak_signal_sample_count: 0,
+        first_weak_time: null,
+        last_weak_time: null,
+        minimum_rssi: null,
+        maximum_rssi: null
+      };
+      bucket.weak_signal_sample_count += asNumber(row.weak_signal_sample_count);
+      if (!bucket.first_weak_time || new Date(row.first_weak_time) < new Date(bucket.first_weak_time)) {
+        bucket.first_weak_time = row.first_weak_time;
+      }
+      if (!bucket.last_weak_time || new Date(row.last_weak_time) > new Date(bucket.last_weak_time)) {
+        bucket.last_weak_time = row.last_weak_time;
+      }
+      const minimum = Number(row.minimum_rssi);
+      const maximum = Number(row.maximum_rssi);
+      if (Number.isFinite(minimum)) {
+        bucket.minimum_rssi = bucket.minimum_rssi == null ? minimum : Math.min(bucket.minimum_rssi, minimum);
+      }
+      if (Number.isFinite(maximum)) {
+        bucket.maximum_rssi = bucket.maximum_rssi == null ? maximum : Math.max(bucket.maximum_rssi, maximum);
+      }
+      buckets.set(key, bucket);
+    });
+  return [...buckets.values()].sort((left, right) => new Date(left.bucket_start) - new Date(right.bucket_start));
+}
+
+function weakBucketLabel(value, analysisHours) {
+  if (!value) return '--';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const options = analysisHours <= 24
+    ? { hour: '2-digit', minute: '2-digit', hour12: false }
+    : analysisHours <= 168
+      ? { day: '2-digit', month: 'short', hour: '2-digit', hour12: false }
+      : { day: '2-digit', month: 'short' };
+  return new Intl.DateTimeFormat('en-GB', options).format(date);
+}
+
+function renderWeakSignalBarChart(host, rows, {
+  valueKey,
+  labelForRow,
+  tooltipForRow,
+  yAxisLabel,
+  formatValue,
+  emptyMessage
+}) {
+  host.replaceChildren();
+  host.classList.remove('empty-state');
+  const points = rows.filter((row) => Number.isFinite(Number(row[valueKey])));
+  if (!points.length) {
+    host.classList.add('empty-state');
+    host.textContent = emptyMessage;
+    return;
+  }
+
+  const width = Math.max(620, points.length * 96 + 100);
+  const height = 292;
+  const margin = { left: 58, right: 18, top: 28, bottom: 72 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const observedMax = Math.max(...points.map((row) => Number(row[valueKey])), 0);
+  const max = observedMax <= 5
+    ? 5
+    : Math.ceil((observedMax * 1.15) / (observedMax <= 100 ? 5 : 10)) * (observedMax <= 100 ? 5 : 10);
+  const barWidth = Math.min(62, (plotWidth / points.length) * 0.62);
+  const x = (index) => margin.left + ((index + 0.5) / points.length) * plotWidth;
+  const y = (value) => margin.top + (1 - value / (max || 1)) * plotHeight;
+  const svg = svgElement('svg', {
+    viewBox: `0 0 ${width} ${height}`,
+    role: 'img',
+    'aria-label': yAxisLabel
+  });
+  const ticks = 4;
+  for (let index = 0; index <= ticks; index += 1) {
+    const value = (max / ticks) * index;
+    const tickY = y(value);
+    svg.append(svgElement('line', {
+      x1: margin.left,
+      y1: tickY,
+      x2: width - margin.right,
+      y2: tickY,
+      class: 'weak-signal-grid-line'
+    }));
+    const label = svgElement('text', {
+      x: margin.left - 8,
+      y: tickY + 4,
+      'text-anchor': 'end',
+      class: 'weak-signal-axis-label'
+    });
+    label.textContent = formatValue(value);
+    svg.append(label);
+  }
+  const yTitle = svgElement('text', {
+    x: 16,
+    y: margin.top + plotHeight / 2,
+    transform: `rotate(-90 16 ${margin.top + plotHeight / 2})`,
+    'text-anchor': 'middle',
+    class: 'weak-signal-axis-title'
+  });
+  yTitle.textContent = yAxisLabel;
+  svg.append(yTitle);
+
+  points.forEach((row, index) => {
+    const value = Math.max(0, Number(row[valueKey]));
+    const barTop = y(value);
+    const bar = svgElement('rect', {
+      x: x(index) - barWidth / 2,
+      y: barTop,
+      width: barWidth,
+      height: Math.max(0, margin.top + plotHeight - barTop),
+      rx: 5,
+      class: 'weak-signal-bar'
+    });
+    const title = svgElement('title');
+    title.textContent = tooltipForRow(row);
+    bar.append(title);
+    svg.append(bar);
+
+    const valueLabel = svgElement('text', {
+      x: x(index),
+      y: Math.max(margin.top + 13, barTop - 7),
+      'text-anchor': 'middle',
+      class: 'weak-signal-value-label'
+    });
+    valueLabel.textContent = formatValue(value);
+    svg.append(valueLabel);
+
+    const axisLabel = svgElement('text', {
+      x: x(index),
+      y: margin.top + plotHeight + 20,
+      'text-anchor': 'end',
+      transform: `rotate(-42 ${x(index)} ${margin.top + plotHeight + 20})`,
+      class: 'weak-signal-axis-label'
+    });
+    axisLabel.textContent = labelForRow(row);
+    svg.append(axisLabel);
+  });
+
+  const scroll = document.createElement('div');
+  scroll.className = 'weak-signal-chart-scroll';
+  scroll.append(svg);
+  host.append(scroll);
+}
+
+function renderWeakSignalRate(payload, selectedRobot, selectedPoi) {
+  const summary = payload.summary || {};
+  const threshold = asNumber(summary.weak_rssi_threshold || -67);
+  const rows = weakSignalRowsForScope(payload, selectedRobot, selectedPoi)
+    .slice()
+    .sort((left, right) => (
+      asNumber(right.weak_signal_rate) - asNumber(left.weak_signal_rate)
+      || asNumber(right.weak_signal_sample_count) - asNumber(left.weak_signal_sample_count)
+      || String(left.robot_code).localeCompare(String(right.robot_code), 'en')
+    ));
+  elements.weakSignalRateSubtitle.textContent = `Weak means RSSI ≤ ${formatNumber(threshold)} dBm · valid negative RSSI samples are the denominator · zero-signal rows are excluded`;
+  renderWeakSignalBarChart(elements.weakSignalRateChart, rows, {
+    valueKey: 'weak_signal_rate',
+    labelForRow: (row) => String(row.robot_code),
+    tooltipForRow: (row) => `${row.robot_code} · ${formatPercent(row.weak_signal_rate, 1)} weak · ${formatNumber(row.weak_signal_sample_count)} weak / ${formatNumber(row.valid_signal_sample_count)} valid samples`,
+    yAxisLabel: 'Weak-signal rate (%)',
+    formatValue: (value) => formatPercent(value, 1),
+    emptyMessage: 'No valid strict Running-task WiFi samples are available for the selected filters.'
+  });
+}
+
+function renderWeakSignalTimeline(payload, selectedRobot, selectedPoi) {
+  const summary = payload.summary || {};
+  const rows = aggregateWeakSignalTimeline(payload.weakTimeline || [], selectedRobot, selectedPoi);
+  const scopeLabel = [
+    selectedRobot === 'ALL' ? 'All robots' : selectedRobot,
+    selectedPoi === 'ALL' ? 'All targets' : selectedPoi
+  ].join(' · ');
+  const busiest = rows.reduce((highest, row) => (
+    !highest || asNumber(row.weak_signal_sample_count) > asNumber(highest.weak_signal_sample_count)
+      ? row
+      : highest
+  ), null);
+  const totalWeak = rows.reduce((total, row) => total + asNumber(row.weak_signal_sample_count), 0);
+  const peakShare = busiest && totalWeak > 0
+    ? (100 * asNumber(busiest.weak_signal_sample_count)) / totalWeak
+    : null;
+  elements.weakSignalTimelineSubtitle.textContent = busiest
+    ? `X = time; Y = weak-signal sample count. Peak: ${weakBucketLabel(busiest.bucket_start, asNumber(summary.analysis_window_hours))} · ${formatNumber(busiest.weak_signal_sample_count)} rows${peakShare == null ? '' : ` (${formatPercent(peakShare, 1)} of weak rows)`}.`
+    : `No strict sample with RSSI <= ${formatNumber(summary.weak_rssi_threshold || -67)} dBm in the selected filters.`;
+  renderWeakSignalBarChart(elements.weakSignalTimelineChart, rows, {
+    valueKey: 'weak_signal_sample_count',
+    labelForRow: (row) => weakBucketLabel(row.bucket_start, asNumber(summary.analysis_window_hours)),
+    tooltipForRow: (row) => `Time: ${formatDateTime(row.first_weak_time)} to ${formatDateTime(row.last_weak_time)} · Weak rows: ${formatNumber(row.weak_signal_sample_count)} · RSSI: ${formatNumber(row.minimum_rssi)} to ${formatNumber(row.maximum_rssi)} dBm`,
+    yAxisLabel: 'Weak-signal sample count',
+    formatValue: (value) => formatNumber(value),
+    emptyMessage: 'No weak-signal observation meets the RSSI ≤ -67 dBm threshold for the selected filters.'
+  });
+}
+
+function findWeakSignalDiagnostic(payload, selectedRobot, selectedPoi) {
+  const diagnostics = payload.weakSignalDiagnostics || [];
+  if (selectedRobot !== 'ALL') {
+    return diagnostics.find((item) => (
+      item.scope_type === 'ROBOT'
+      && String(item.scope_robot_code) === selectedRobot
+    )) || null;
+  }
+  if (selectedPoi !== 'ALL') {
+    return diagnostics.find((item) => (
+      item.scope_type === 'TARGET'
+      && String(item.scope_poi_target) === selectedPoi
+    )) || null;
+  }
+  return diagnostics[0] || null;
+}
+
+function renderWeakSignalDiagnosis(payload, selectedRobot, selectedPoi) {
+  const host = elements.weakSignalDiagnosis;
+  const summary = payload.summary || {};
+  const diagnostic = findWeakSignalDiagnostic(payload, selectedRobot, selectedPoi);
+  host.replaceChildren();
+  host.classList.remove('empty-state');
+  if (!asNumber(summary.running_matched_sample_count)) {
+    host.classList.add('empty-state');
+    host.textContent = 'No strict Running-task WiFi sample is available, so a weak-signal cause cannot be assessed.';
+    return;
+  }
+  if (!diagnostic) {
+    host.classList.add('empty-state');
+    host.textContent = `No weak-signal sample (RSSI ≤ ${formatNumber(summary.weak_rssi_threshold || -67)} dBm) exists in the selected filters; no cause rule was triggered.`;
+    return;
+  }
+
+  host.dataset.confidence = String(diagnostic.confidence || 'LOW').toLowerCase();
+  const header = document.createElement('header');
+  header.append(
+    textNode('span', 'weak-signal-diagnosis-kicker', diagnostic.cause_status.replaceAll('_', ' ')),
+    textNode('strong', '', diagnostic.scope_type === 'ROBOT'
+      ? `${diagnostic.scope_robot_code} weak-signal assessment`
+      : `${diagnostic.scope_poi_target} route/area assessment`),
+    textNode('span', 'wifi-minimum-confidence', `${diagnostic.confidence} confidence`)
+  );
+  const facts = document.createElement('div');
+  facts.className = 'weak-signal-facts';
+  [
+    ['Weak rate', diagnostic.weak_signal_rate == null ? '--' : formatPercent(diagnostic.weak_signal_rate, 1)],
+    ['Weak samples', formatNumber(diagnostic.weak_signal_sample_count)],
+    ['Threshold', `≤ ${formatNumber(summary.weak_rssi_threshold || -67)} dBm`]
+  ].forEach(([label, value]) => {
+    const fact = document.createElement('div');
+    fact.append(textNode('span', '', label), textNode('strong', '', value));
+    facts.append(fact);
+  });
+  const cause = document.createElement('div');
+  cause.className = 'weak-signal-cause';
+  cause.append(textNode('h5', '', 'What the evidence supports'), textNode('p', '', diagnostic.cause));
+  const evidence = document.createElement('div');
+  evidence.className = 'weak-signal-evidence';
+  evidence.append(textNode('h5', '', 'Evidence'));
+  const evidenceList = document.createElement('ul');
+  (diagnostic.evidence || []).forEach((item) => evidenceList.append(textNode('li', '', item)));
+  evidence.append(evidenceList);
+  const actions = document.createElement('div');
+  actions.className = 'weak-signal-actions';
+  actions.append(textNode('h5', '', 'Recommended checks'));
+  const actionList = document.createElement('ol');
+  (diagnostic.actions || []).forEach((item) => actionList.append(textNode('li', '', item)));
+  actions.append(actionList);
+  const rule = textNode('p', 'weak-signal-rule', `Transparent rule: ${diagnostic.rule_id} · Version ${diagnostic.rule_version}`);
+  host.append(header, facts, cause, evidence, actions, rule);
+}
+
+function findWifiMinimumDiagnostic(payload, selectedRobot, selectedPoi) {
+  const scopeType = selectedRobot === 'ALL'
+    ? (selectedPoi === 'ALL' ? 'ALL' : 'TARGET')
+    : (selectedPoi === 'ALL' ? 'ROBOT' : 'ROBOT_TARGET');
+  return (payload.minimumDiagnostics || []).find((item) => (
+    String(item.scope_type) === scopeType
+    && (scopeType === 'ALL' || scopeType === 'TARGET' || String(item.scope_robot_code) === selectedRobot)
+    && (scopeType === 'ALL' || scopeType === 'ROBOT' || String(item.scope_poi_target) === selectedPoi)
+  )) || null;
+}
+
+function renderWifiMinimumDiagnostic(diagnostic) {
+  const panel = document.createElement('section');
+  panel.className = 'wifi-minimum-diagnostic';
+  if (!diagnostic) {
+    panel.classList.add('empty-inline');
+    panel.textContent = 'No traceable negative-RSSI minimum record exists for the current filters.';
+    return panel;
+  }
+
+  panel.dataset.confidence = String(diagnostic.confidence || 'LOW').toLowerCase();
+  const header = document.createElement('header');
+  header.append(
+    textNode('h5', '', 'Minimum Location and Cause Assessment'),
+    textNode('span', 'wifi-minimum-confidence', `${diagnostic.confidence || 'LOW'} confidence`)
+  );
+
+  const facts = document.createElement('div');
+  facts.className = 'wifi-minimum-facts';
+  [
+    ['Minimum', `${formatNumber(diagnostic.minimum_rssi, 1)} dBm`],
+    ['Robot', diagnostic.robot_code || '--'],
+    ['Event time', formatExactDateTime(diagnostic.event_time)],
+    ['Related target POI', diagnostic.poi_target || '--']
+  ].forEach(([label, value]) => {
+    const fact = document.createElement('div');
+    fact.append(textNode('span', '', label), textNode('strong', '', value));
+    facts.append(fact);
+  });
+
+  const cause = document.createElement('div');
+  cause.className = 'wifi-minimum-cause';
+  cause.append(
+    textNode('h6', '', 'Cause assessment'),
+    textNode('p', '', diagnostic.cause || 'Cause not confirmed.')
+  );
+
+  const evidence = document.createElement('div');
+  evidence.className = 'wifi-minimum-evidence';
+  evidence.append(textNode('h6', '', 'Evidence'));
+  const evidenceList = document.createElement('ul');
+  (diagnostic.evidence || []).forEach((item) => evidenceList.append(textNode('li', '', item)));
+  evidence.append(evidenceList);
+
+  const resolution = document.createElement('div');
+  resolution.className = 'wifi-minimum-resolution';
+  resolution.append(textNode('h6', '', 'Recommended actions'));
+  const resolutionList = document.createElement('ol');
+  (diagnostic.actions || []).forEach((item) => resolutionList.append(textNode('li', '', item)));
+  resolution.append(resolutionList);
+
+  const footer = textNode(
+    'p',
+    'wifi-minimum-rule',
+    `Transparent rule: ${diagnostic.rule_id || '--'} · Version ${diagnostic.rule_version || '--'}`
+  );
+  const rationale = document.createElement('div');
+  rationale.className = 'wifi-minimum-rationale';
+  rationale.append(cause, evidence);
+
+  const body = document.createElement('div');
+  body.className = 'wifi-minimum-body';
+  body.append(rationale, resolution);
+
+  panel.append(header, facts, body, footer);
+  return panel;
+}
+
+function renderWifiCombinedDiagnostic(minimumDiagnostic, weakSignalDiagnostic, summary = {}) {
+  const panel = document.createElement('section');
+  panel.className = 'wifi-minimum-diagnostic';
+  if (!minimumDiagnostic && !weakSignalDiagnostic) {
+    panel.classList.add('empty-inline');
+    panel.textContent = 'No traceable negative-RSSI minimum or weak-signal pattern exists for the current filters.';
+    return panel;
+  }
+
+  const minimumConfidence = String(minimumDiagnostic?.confidence || 'LOW').toUpperCase();
+  const patternConfidence = weakSignalDiagnostic
+    ? String(weakSignalDiagnostic.confidence || 'LOW').toUpperCase()
+    : null;
+  panel.dataset.confidence = (patternConfidence || minimumConfidence).toLowerCase();
+
+  const header = document.createElement('header');
+  const confidenceLabel = minimumDiagnostic && weakSignalDiagnostic
+    ? `Pattern: ${patternConfidence} | Minimum event: ${minimumConfidence}`
+    : weakSignalDiagnostic
+      ? `Pattern: ${patternConfidence}`
+      : `Minimum event: ${minimumConfidence}`;
+  header.append(
+    textNode('h5', '', 'Lowest Signal: Evidence and Next Step'),
+    textNode('span', 'wifi-minimum-confidence', confidenceLabel)
+  );
+
+  const facts = document.createElement('div');
+  facts.className = 'wifi-minimum-facts';
+  const factRows = [];
+  if (minimumDiagnostic) {
+    factRows.push(
+      ['Minimum event', `${formatNumber(minimumDiagnostic.minimum_rssi, 1)} dBm`],
+      ['Robot', minimumDiagnostic.robot_code || '--'],
+      ['Event time', formatExactDateTime(minimumDiagnostic.event_time)],
+      ['Related target POI', minimumDiagnostic.poi_target || '--']
+    );
+  }
+  if (weakSignalDiagnostic) {
+    factRows.push(
+      ['Weak rate', weakSignalDiagnostic.weak_signal_rate == null ? '--' : formatPercent(weakSignalDiagnostic.weak_signal_rate, 1)],
+      ['Weak samples', formatNumber(weakSignalDiagnostic.weak_signal_sample_count)],
+      ['Weak threshold', `<= ${formatNumber(summary.weak_rssi_threshold || -67)} dBm`]
+    );
+  }
+  factRows.forEach(([label, value]) => {
+    const fact = document.createElement('div');
+    fact.append(textNode('span', '', label), textNode('strong', '', value));
+    facts.append(fact);
+  });
+
+  const cause = document.createElement('div');
+  cause.className = 'wifi-minimum-cause';
+  cause.append(textNode('h6', '', 'What this means'));
+  if (weakSignalDiagnostic) {
+    cause.append(
+      textNode('strong', 'wifi-diagnostic-label', `Repeated pattern (${patternConfidence})`),
+      textNode('p', '', compactDiagnosticCause(weakSignalDiagnostic))
+    );
+  }
+  if (minimumDiagnostic) {
+    cause.append(
+      textNode('strong', 'wifi-diagnostic-label', `Lowest single event (${minimumConfidence})`),
+      textNode('p', '', 'This identifies the record to retest. One lowest value alone cannot prove a point, AP, or robot fault.')
+    );
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'wifi-minimum-resolution';
+  actions.append(textNode('h6', '', 'Do this next'));
+  const actionList = document.createElement('ol');
+  conciseWifiActions(weakSignalDiagnostic || minimumDiagnostic).slice(0, 3).forEach((item) => (
+    actionList.append(textNode('li', '', item))
+  ));
+  actions.append(actionList);
+
+  const evidence = document.createElement('details');
+  evidence.className = 'wifi-evidence-details';
+  evidence.append(textNode('summary', '', 'View evidence and rules'));
+  const evidenceList = document.createElement('ul');
+  if (weakSignalDiagnostic) {
+    (weakSignalDiagnostic.evidence || []).forEach((item) => (
+      evidenceList.append(textNode('li', '', `Repeated pattern: ${item}`))
+    ));
+  }
+  if (minimumDiagnostic) {
+    (minimumDiagnostic.evidence || []).forEach((item) => (
+      evidenceList.append(textNode('li', '', `Minimum event: ${item}`))
+    ));
+  }
+  evidence.append(evidenceList);
+
+  const rules = [
+    minimumDiagnostic && `Minimum event: ${minimumDiagnostic.rule_id || '--'} (v${minimumDiagnostic.rule_version || '--'})`,
+    weakSignalDiagnostic && `Repeated pattern: ${weakSignalDiagnostic.rule_id || '--'} (v${weakSignalDiagnostic.rule_version || '--'})`
+  ].filter(Boolean);
+  const footer = textNode('p', 'wifi-minimum-rule', `Transparent rules: ${rules.join(' | ')}`);
+
+  const rationale = document.createElement('div');
+  rationale.className = 'wifi-minimum-rationale';
+  rationale.append(cause, evidence);
+  const body = document.createElement('div');
+  body.className = 'wifi-minimum-body';
+  body.append(rationale, actions);
+  panel.append(header, facts, body, footer);
+  return panel;
+}
+
+function renderRunningWifiNarrative(payload, selectedPoi, selectedRobot, targetRows) {
+  const host = elements.runningWifiNarrative;
+  const minimumHost = elements.runningWifiMinimumDiagnostic;
+  const summary = payload.summary || {};
+  const robotRows = selectedPoi === 'ALL'
+    ? (payload.byRobot || [])
+    : (payload.byRobotTarget || []).filter((row) => String(row.poi_target) === selectedPoi);
+  host.replaceChildren();
+  host.classList.remove('empty-state');
+
+  if (!asNumber(summary.running_matched_sample_count)) {
+    minimumHost.replaceChildren();
+    minimumHost.classList.add('empty-state');
+    minimumHost.textContent = 'No locatable minimum RSSI record exists in the current analysis window.';
+    host.classList.add('empty-state');
+    host.textContent = 'No job and WiFi records share the same robot, timestamp, and Running status in the current analysis window.';
+    return;
+  }
+
+  const selectedRow = selectedPoi === 'ALL'
+    ? null
+    : targetRows.find((row) => String(row.poi_target) === selectedPoi);
+  const selectedRobotRow = selectedRobot === 'ALL'
+    ? null
+    : (payload.byRobot || []).find((row) => String(row.robot_code) === selectedRobot);
+  const scope = selectedRow || selectedRobotRow || summary;
+  const sampleCount = asNumber(scope.sample_count ?? summary.running_matched_sample_count);
+  const validCount = asNumber(scope.valid_signal_sample_count);
+  const zeroCount = asNumber(scope.zero_signal_sample_count);
+  const zeroRate = sampleCount > 0 ? (zeroCount / sampleCount) * 100 : 0;
+  const minimumDiagnostic = findWifiMinimumDiagnostic(payload, selectedRobot, selectedPoi);
+  const weakSignalDiagnostic = findWeakSignalDiagnostic(payload, selectedRobot, selectedPoi);
+  const title = textNode('h4', '', 'Data Scope');
+  const lead = textNode(
+    'p',
+    'wifi-analysis-lead',
+    summary.is_current
+      ? `${formatNumber(sampleCount)} Running-task WiFi samples match the current filters.`
+      : summary.source_is_current
+        ? `ODS source data is current, but the latest matched Running sample is ${formatNumber(summary.running_sample_age_minutes)} minutes old.`
+        : `This view shows historical data: the latest ODS record is ${formatNumber(summary.source_age_minutes)} minutes old.`
+  );
+
+  const sourceRobots = robotRows
+    .filter((row) => selectedRobot === 'ALL' || String(row.robot_code) === selectedRobot)
+    .sort((a, b) => asNumber(b.sample_count) - asNumber(a.sample_count));
+  const robotSource = document.createElement('div');
+  robotSource.className = 'wifi-source-robots';
+  robotSource.append(textNode('span', '', 'Robots contributing signal data'));
+  const robotChips = document.createElement('div');
+  robotChips.className = 'wifi-source-robot-chips';
+  sourceRobots.forEach((row) => {
+    const chip = textNode(
+      'button',
+      '',
+      `${row.robot_code} · ${formatNumber(row.sample_count)} samples · ${formatNumber(row.average_valid_rssi, 1)} dBm`
+    );
+    chip.type = 'button';
+    chip.addEventListener('click', () => {
+      state.selectedWifiRobot = String(row.robot_code);
+      renderRunningWifiAnalysis(state.dashboard?.wifiRunningAnalysis || {});
+    });
+    robotChips.append(chip);
+  });
+  if (!sourceRobots.length) robotChips.append(textNode('span', 'empty-inline', 'No matched robots'));
+  robotSource.append(robotChips);
+
+  const metrics = document.createElement('div');
+  metrics.className = 'wifi-analysis-metrics';
+  [
+    ['Matched samples', formatNumber(sampleCount), 'Running + exact timestamp match'],
+    ['Average RSSI', `${formatNumber(scope.average_valid_rssi, 1)} dBm`, `${formatNumber(validCount)} valid negative-RSSI samples`],
+    [
+      'Minimum RSSI',
+      `${formatNumber(scope.minimum_valid_rssi, 1)} dBm`,
+      minimumDiagnostic
+        ? `${minimumDiagnostic.robot_code} · ${minimumDiagnostic.poi_target} · ${formatDateTime(minimumDiagnostic.event_time)}`
+        : 'Observed minimum in the window'
+    ],
+    ['Confirmed zero signal', `${formatNumber(zeroCount)} · ${formatPercent(zeroRate, 1)}`, 'wifi_signal_level = 0']
+  ].forEach(([label, value, detail]) => {
+    const item = document.createElement('div');
+    item.append(textNode('span', '', label), textNode('strong', '', value), textNode('small', '', detail));
+    metrics.append(item);
+  });
+  minimumHost.replaceChildren(renderWifiCombinedDiagnostic(minimumDiagnostic, weakSignalDiagnostic, summary));
+  minimumHost.classList.remove('empty-state');
+
+  const boundary = textNode(
+    'p',
+    'wifi-scope-note',
+    `Scope: ${formatNumber(sourceRobots.length)} robots, ${formatNumber(targetRows.length)} target POIs, ${formatNumber(validCount)} valid RSSI rows. Target POI is a task destination, not a measured physical RF position. Use the conclusion above for the rule and next step.`
+  );
+
+  host.append(title, lead, robotSource, metrics, boundary);
+}
+
+function primaryWifiDiagnostic(payload, selectedRobot, selectedPoi) {
+  if (selectedRobot !== 'ALL' || selectedPoi !== 'ALL') {
+    return findWeakSignalDiagnostic(payload, selectedRobot, selectedPoi);
+  }
+  const confidenceRank = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+  const robotRows = new Map((payload.byRobot || []).map((row) => [String(row.robot_code), row]));
+  return (payload.weakSignalDiagnostics || [])
+    .filter((item) => item.scope_type === 'ROBOT')
+    .slice()
+    .sort((left, right) => {
+      const confidenceGap = asNumber(confidenceRank[String(right.confidence || 'LOW').toUpperCase()])
+        - asNumber(confidenceRank[String(left.confidence || 'LOW').toUpperCase()]);
+      if (confidenceGap) return confidenceGap;
+      const leftRow = robotRows.get(String(left.scope_robot_code)) || {};
+      const rightRow = robotRows.get(String(right.scope_robot_code)) || {};
+      return asNumber(rightRow.weak_signal_rate) - asNumber(leftRow.weak_signal_rate)
+        || asNumber(rightRow.weak_signal_sample_count) - asNumber(leftRow.weak_signal_sample_count);
+    })[0] || null;
+}
+
+function conciseWifiCause(diagnostic, payload) {
+  if (!diagnostic) return 'No weak-signal rule was triggered in the selected strict samples.';
+  if (diagnostic.cause_status === 'DATA_QUALITY_RISK') {
+    return 'The RSSI value remains fixed across many samples. Validate the telemetry stream before changing wireless hardware.';
+  }
+  if (diagnostic.scope_type === 'ROBOT') {
+    const robotRow = (payload.byRobot || []).find((row) => String(row.robot_code) === String(diagnostic.scope_robot_code)) || {};
+    return `${diagnostic.scope_robot_code} has weak samples across ${formatNumber(robotRow.weak_target_count)} task destinations. This is a robot-side candidate, not a confirmed hardware fault.`;
+  }
+  const targetRow = (payload.byTarget || []).find((row) => String(row.poi_target) === String(diagnostic.scope_poi_target)) || {};
+  return `${diagnostic.scope_poi_target} is associated with weak samples from ${formatNumber(targetRow.weak_robot_count)} robots. This is a route/area candidate, not proof of the exact physical point.`;
+}
+
+function conciseWifiActions(diagnostic) {
+  if (!diagnostic) return ['Collect more strict Running-task WiFi samples before scheduling maintenance.'];
+  if (diagnostic.cause_status === 'DATA_QUALITY_RISK') {
+    return [
+      'Verify that raw RSSI changes on the robot and in ODS.',
+      'Repair collection or publishing if only the ODS value is fixed.',
+      'Retest the route after telemetry is validated.'
+    ];
+  }
+  if (diagnostic.scope_type === 'ROBOT') {
+    return [
+      `Run ${diagnostic.scope_robot_code} and one comparison robot on the same route.`,
+      `Inspect ${diagnostic.scope_robot_code}'s antenna, cable, WiFi adapter, and roaming configuration.`,
+      'Check controller association, retry, and roaming logs during the peak window.'
+    ];
+  }
+  return [
+    `Run at least two robots on the route associated with ${diagnostic.scope_poi_target}.`,
+    'Check AP coverage, channel plan, interference, and roaming during the peak window.',
+    'Make physical changes only after the pattern repeats across robots.'
+  ];
+}
+
+function compactDiagnosticCause(diagnostic) {
+  if (!diagnostic) return 'No repeatable weak-signal pattern is available in this filter.';
+  if (diagnostic.cause_status === 'DATA_QUALITY_RISK') {
+    return 'RSSI is fixed across many samples. Check telemetry before changing WiFi hardware.';
+  }
+  if (diagnostic.scope_type === 'ROBOT') {
+    return 'Weak readings repeat across several task destinations. Check this robot first, then compare it on the same route with another robot.';
+  }
+  return 'Weak readings repeat across several robots. Check the route area and AP behavior; target POI is not an exact RF position.';
+}
+
+function renderWifiConclusion(payload, selectedRobot, selectedPoi) {
+  const host = elements.wifiConclusion;
+  const summary = payload.summary || {};
+  const threshold = asNumber(summary.weak_rssi_threshold || -67);
+  host.replaceChildren();
+  host.classList.remove('empty-state');
+
+  if (!asNumber(summary.running_matched_sample_count)) {
+    host.classList.add('empty-state');
+    host.textContent = 'No conclusion: this time period has no strict match of Running task, robot ID, timestamp, and target POI.';
+    return;
+  }
+
+  const diagnostic = primaryWifiDiagnostic(payload, selectedRobot, selectedPoi);
+  const timeline = aggregateWeakSignalTimeline(payload.weakTimeline || [], selectedRobot, selectedPoi);
+  const peak = timeline.reduce((current, row) => (
+    !current || asNumber(row.weak_signal_sample_count) > asNumber(current.weak_signal_sample_count) ? row : current
+  ), null);
+  const totalWeak = timeline.reduce((total, row) => total + asNumber(row.weak_signal_sample_count), 0);
+  const peakShare = peak && totalWeak > 0
+    ? (100 * asNumber(peak.weak_signal_sample_count)) / totalWeak
+    : null;
+  const scope = selectedRobot !== 'ALL' ? selectedRobot : selectedPoi !== 'ALL' ? selectedPoi : 'Fleet';
+  const hasWeakSignal = asNumber(summary.weak_signal_sample_count) > 0;
+
+  const heading = textNode(
+    'h3',
+    '',
+    hasWeakSignal
+      ? `${scope}: WiFi follow-up is needed`
+      : `${scope}: no weak-signal threshold was reached`
+  );
+  const summaryText = textNode(
+    'p',
+    'wifi-conclusion-summary',
+    hasWeakSignal
+      ? conciseWifiCause(diagnostic, payload)
+      : `No strict Running-task sample is at or below ${formatNumber(threshold)} dBm. This does not assess periods without matched task and WiFi records.`
+  );
+  const header = document.createElement('header');
+  header.append(textNode('span', 'section-kicker', 'WIFI CONCLUSION'), heading, summaryText);
+
+  const metrics = document.createElement('div');
+  metrics.className = 'wifi-conclusion-metrics';
+  [
+    ['Weak rate', hasWeakSignal ? formatPercent(summary.weak_signal_rate, 1) : '0%', `RSSI <= ${formatNumber(threshold)} dBm`],
+    ['Priority scope', diagnostic ? (diagnostic.scope_robot_code || diagnostic.scope_poi_target || scope) : scope, diagnostic?.cause_status?.replaceAll('_', ' ') || 'No weak pattern'],
+    ['Peak time', peak ? weakBucketLabel(peak.bucket_start, asNumber(summary.analysis_window_hours)) : '--', peak ? `${formatNumber(peak.weak_signal_sample_count)} weak rows${peakShare == null ? '' : ` (${formatPercent(peakShare, 1)})`}` : 'No weak rows'],
+    ['Next action', conciseWifiActions(diagnostic)[0], 'Complete this before hardware replacement']
+  ].forEach(([label, value, detail]) => {
+    const metric = document.createElement('div');
+    metric.append(textNode('span', '', label), textNode('strong', '', value), textNode('small', '', detail));
+    metrics.append(metric);
+  });
+
+  const details = document.createElement('details');
+  details.className = 'wifi-method-details';
+  details.append(textNode('summary', '', 'How this conclusion is determined'));
+  const methodList = document.createElement('ul');
+  [
+    'Data scope: ODS job and WiFi rows must have the same robot ID and exact timestamp; job_status must be Running and target POI must exist.',
+    `Weak signal: negative RSSI <= ${formatNumber(threshold)} dBm. The rate is weak rows divided by valid negative-RSSI rows; zero-signal rows are excluded.`,
+    'Confidence: a single minimum is LOW; repeated weak samples across multiple task destinations or across robots can be MEDIUM; fixed RSSI values are a HIGH data-quality risk.',
+    diagnostic ? `Triggered rule: ${diagnostic.rule_id} (version ${diagnostic.rule_version}).` : 'No weak-signal rule was triggered.'
+  ].forEach((item) => methodList.append(textNode('li', '', item)));
+  details.append(methodList);
+
+  host.append(header, metrics, details);
+}
+
+function renderRunningWifiAnalysis(payload) {
+  if (!elements.runningWifiTrendChart || !elements.wifiPoiSelect || !elements.wifiRobotSelect) return;
+  const summary = payload.summary || {};
+  const byRobot = payload.byRobot || [];
+  const robotTargets = payload.byRobotTarget || [];
+  const actualAnalysisHours = asNumber(summary.analysis_window_hours);
+  const requestedAnalysisHours = asNumber(payload.window?.hours, state.window.hours);
+  const rangeIsLimited = actualAnalysisHours > 0 && actualAnalysisHours < requestedAnalysisHours;
+
+  const sourceAge = asNumber(summary.source_age_minutes);
+  const sourceIsCurrent = summary.source_is_current === true || asNumber(summary.source_is_current) === 1;
+  elements.runningWifiFreshness.dataset.tone = sourceIsCurrent ? 'current' : 'stale';
+  elements.runningWifiFreshness.textContent = sourceIsCurrent
+    ? `Analysis data: Current · ${formatNumber(sourceAge)} min`
+    : `Analysis data: Stale · ${formatNumber(sourceAge)} min`;
+  elements.runningWifiFreshness.title = 'Freshness of the records used by this Running-task WiFi analysis.';
+  renderWifiConclusion(payload, state.selectedWifiRobot, state.selectedWifiPoi);
+
+  if (rangeIsLimited) {
+    state.selectedWifiRobot = 'ALL';
+    state.selectedWifiPoi = 'ALL';
+    elements.wifiRobotSelect.replaceChildren();
+    elements.wifiPoiSelect.replaceChildren();
+    const robotOption = document.createElement('option');
+    robotOption.value = 'ALL';
+    robotOption.textContent = 'Long-range data not loaded';
+    const poiOption = document.createElement('option');
+    poiOption.value = 'ALL';
+    poiOption.textContent = 'Long-range data not loaded';
+    elements.wifiRobotSelect.append(robotOption);
+    elements.wifiPoiSelect.append(poiOption);
+    elements.wifiRobotSelect.disabled = true;
+    elements.wifiPoiSelect.disabled = true;
+    elements.runningWifiFreshness.dataset.tone = 'stale';
+    elements.runningWifiFreshness.textContent = 'Long-range query is not enabled';
+    elements.runningWifiChartSubtitle.textContent = `${state.window.label} is synchronized; the current safe ODS query limit is ${formatNumber(actualAnalysisHours)} hours.`;
+    elements.wifiPointStrengthSubtitle.textContent = 'No 24-hour data is used as a substitute for the selected long-range result.';
+    [
+      [elements.runningWifiTrendChart, 'WiFi trend data for the current time range is not loaded.'],
+      [elements.runningWifiMinimumDiagnostic, 'Minimum-value diagnostics for the current time range are not loaded.'],
+      [elements.runningWifiNarrative, 'An ODS long-range query index is required before findings can be generated for this time range.'],
+      [elements.weakSignalRateChart, 'Weak-signal rates for the current time range are not loaded.'],
+      [elements.weakSignalTimelineChart, 'Weak-signal timing for the current time range is not loaded.'],
+      [elements.wifiPointStrengthChart, 'Target-POI signal data for the current time range is not loaded.']
+    ].forEach(([host, message]) => {
+      host.replaceChildren();
+      host.classList.add('empty-state');
+      host.textContent = message;
+    });
+    return;
+  }
+
+  elements.wifiRobotSelect.disabled = false;
+  elements.wifiPoiSelect.disabled = false;
+  const availableRobots = new Set(byRobot.map((row) => String(row.robot_code)));
+  if (state.selectedWifiRobot !== 'ALL' && !availableRobots.has(state.selectedWifiRobot)) {
+    state.selectedWifiRobot = 'ALL';
+  }
+  const targetRows = state.selectedWifiRobot === 'ALL'
+    ? (payload.byTarget || [])
+    : robotTargets
+      .filter((row) => String(row.robot_code) === state.selectedWifiRobot)
+      .map((row) => ({ ...row, robot_count: 1 }));
+  const availableTargets = new Set(targetRows.map((row) => String(row.poi_target)));
+  if (state.selectedWifiPoi !== 'ALL' && !availableTargets.has(state.selectedWifiPoi)) {
+    state.selectedWifiPoi = 'ALL';
+  }
+
+  elements.wifiRobotSelect.replaceChildren();
+  const allRobotsOption = document.createElement('option');
+  allRobotsOption.value = 'ALL';
+  const activeRobotCount = asNumber(state.dashboard?.summary?.active_robot_count);
+  allRobotsOption.textContent = activeRobotCount > 0
+    ? `Eligible (${formatNumber(byRobot.length)} / ${formatNumber(activeRobotCount)})`
+    : `Eligible (${formatNumber(byRobot.length)})`;
+  elements.wifiRobotSelect.append(allRobotsOption);
+  byRobot
+    .slice()
+    .sort((a, b) => String(a.robot_code).localeCompare(String(b.robot_code), 'en'))
+    .forEach((row) => {
+      const option = document.createElement('option');
+      option.value = String(row.robot_code);
+      option.textContent = `${row.robot_code} · n=${formatNumber(row.sample_count)}`;
+      elements.wifiRobotSelect.append(option);
+    });
+  elements.wifiRobotSelect.value = state.selectedWifiRobot;
+
+  elements.wifiPoiSelect.replaceChildren();
+  const allOption = document.createElement('option');
+  allOption.value = 'ALL';
+  allOption.textContent = `All targets (${formatNumber(targetRows.length)})`;
+  elements.wifiPoiSelect.append(allOption);
+  targetRows
+    .slice()
+    .sort((a, b) => String(a.poi_target).localeCompare(String(b.poi_target), 'en'))
+    .forEach((row) => {
+      const option = document.createElement('option');
+      option.value = String(row.poi_target);
+      option.textContent = `${row.poi_target} · n=${formatNumber(row.sample_count)}`;
+      elements.wifiPoiSelect.append(option);
+    });
+  elements.wifiPoiSelect.value = state.selectedWifiPoi;
+
+  const scopeLabel = [
+    state.selectedWifiRobot === 'ALL' ? 'All robots' : state.selectedWifiRobot,
+    state.selectedWifiPoi === 'ALL' ? 'All targets' : state.selectedWifiPoi
+  ].join(' · ');
+  elements.runningWifiChartSubtitle.textContent = `${scopeLabel} · ${formatNumber(summary.analysis_window_hours)} hours · ${formatNumber(summary.bucket_minutes)}-minute buckets · averages exclude zero-signal samples`;
+
+  const trend = aggregateRunningWifiTrend(payload.trend || [], state.selectedWifiPoi, state.selectedWifiRobot);
+  renderRunningWifiTrend(elements.runningWifiTrendChart, trend);
+  renderRunningWifiNarrative(payload, state.selectedWifiPoi, state.selectedWifiRobot, targetRows);
+  renderWeakSignalRate(payload, state.selectedWifiRobot, state.selectedWifiPoi);
+  renderWeakSignalTimeline(payload, state.selectedWifiRobot, state.selectedWifiPoi);
+  renderWifiPointComparison(payload);
+}
+
+function renderRobotProfile(profile) {
+  const current = (state.dashboard?.robots || []).find(
+    (robot) => String(robot.master_robot_id) === String(profile.robot.master_robot_id)
+  );
+  if (!current) {
+    elements.profileAlertBanner.dataset.tone = 'critical';
+    elements.profileAlertBanner.querySelector('strong').textContent = 'The selected robot is not present in the current DWS dashboard dataset.';
+    return;
+  }
+
+  const robotId = robotIdentifier(current);
+  const diagnosis = robotDiagnostic(current);
+  elements.profileRobotSelect.value = String(current.master_robot_id);
+  elements.profileRobotSubtitle.textContent = `Master ID ${current.master_robot_id} · ${state.window.label} · ${profile.robot.robot_serial_number || 'Serial number not reported'}`;
+  elements.profileAlertBanner.dataset.tone = diagnosis ? 'critical' : 'healthy';
+  elements.profileAlertBanner.querySelector('span').textContent = diagnosis ? 'Transparent Diagnosis' : 'Current Health';
+  elements.profileAlertBanner.querySelector('strong').textContent = diagnosis
+    ? `${diagnosis.diagnosis} (${diagnosis.confidence} confidence) Next: ${diagnosis.recommendedActions?.[0] || 'inspect current evidence'}`
+    : 'No current diagnostic rule was triggered for this robot.';
+
+  elements.profileStatusValue.textContent = String(current.data_freshness_status || 'MISSING').replaceAll('_', ' ');
+  elements.profileStatusDetail.textContent = `Non-snapshot DWS · threshold ${formatNumber(state.dashboard?.staleMinutes || 30)} min`;
+  elements.profileBatteryValue.textContent = current.battery_soc == null ? '--' : `${formatNumber(current.battery_soc, 1)}%`;
+  elements.profileBatteryValue.className = batteryClass(current.battery_soc);
+  elements.profileBatteryDetail.textContent = current.battery_freshness_status === 'CURRENT'
+    ? `Latest DWS hourly average · ${formatNumber(current.battery_voltage, 2)}V · ${formatNumber(current.battery_current, 2)}A`
+    : `Suppressed · ${String(current.battery_freshness_status || 'MISSING').replaceAll('_', ' ')}`;
+  elements.profileTaskValue.textContent = 'Not available';
+  elements.profileTaskDetail.textContent = 'Current task ID is not stored in DWS daily aggregates';
+  elements.profileWifiValue.textContent = current.current_rssi == null ? '--' : `${formatNumber(current.current_rssi)} dBm`;
+  elements.profileWifiDetail.textContent = current.wifi_freshness_status === 'CURRENT'
+    ? 'Latest DWS hourly RSSI average · AP identity not stored'
+    : `Suppressed · ${String(current.wifi_freshness_status || 'MISSING').replaceAll('_', ' ')}`;
+  elements.profilePositionValue.textContent = 'Not available';
+  elements.profilePositionDetail.textContent = 'Position is not stored in the non-snapshot DWS hourly tables';
+  elements.profileDataTimeValue.textContent = formatDateTime(current.status_dws_load_time || current.dws_load_time);
+  elements.profileDataTimeValue.className = dataTimeClass(current.status_dws_load_time || current.dws_load_time);
+  elements.profileDataTimeDetail.textContent = `DWS load ${formatDataAge(current.status_dws_load_time || current.dws_load_time)}`;
+
+  renderLineChart(elements.profileBatteryChart, profile.batteryTrend, {
+    valueKey: 'avg_battery_soc', labelKey: 'stat_hour', color: '#2563eb', suffix: '%', fixedRange: [0, 100]
+  });
+  renderLineChart(elements.profileWifiChart, profile.wifiTrend, {
+    valueKey: 'avg_rssi', labelKey: 'stat_hour', color: '#7c3aed', suffix: ' dBm'
+  });
+  renderLineChart(elements.profileStatusChart, profile.statusTrend, {
+    valueKey: 'error_sample_count', labelKey: 'stat_hour', color: '#dc2626', suffix: '', nonNegative: true
+  });
+  renderLineChart(elements.profileJobChart, profile.jobTrend, {
+    valueKey: 'job_count', labelKey: 'stat_date', color: '#059669', suffix: '', nonNegative: true
+  });
+
+  const sourceTimes = [
+    ['Status', current.status_event_time || current.source_event_time],
+    ['Battery', current.battery_event_time],
+    ['WiFi', current.latest_wifi_time],
+    ['Last task in DWS history', current.job_event_time],
+    ['DWS status load', current.status_dws_load_time],
+    ['DWS battery load', current.battery_dws_load_time],
+    ['DWS WiFi load', current.wifi_dws_load_time]
+  ];
+  elements.profileSourceTimesBody.replaceChildren();
+  sourceTimes.forEach(([source, time]) => {
+    const row = elements.profileSourceTimesBody.insertRow();
+    row.insertCell().textContent = source;
+    const timeCell = row.insertCell();
+    timeCell.textContent = formatDateTime(time);
+    timeCell.className = dataTimeClass(time);
+  });
+
+  elements.profileTaskBreakdownBody.replaceChildren();
+  if (!profile.taskBreakdown.length) {
+    const row = elements.profileTaskBreakdownBody.insertRow();
+    const cell = row.insertCell();
+    cell.colSpan = 6;
+    cell.className = 'empty-cell';
+    cell.textContent = 'No task history is available for this robot in the selected time range';
+  } else {
+    profile.taskBreakdown.forEach((item) => {
+      const row = elements.profileTaskBreakdownBody.insertRow();
+      row.insertCell().textContent = item.job_type_code;
+      row.insertCell().textContent = `${item.robot_mode_id} · ${item.robot_mode_detail}`;
+      row.insertCell().textContent = formatNumber(item.job_count);
+      row.insertCell().textContent = formatNumber(item.completed_status_count);
+      row.insertCell().textContent = formatNumber(item.failed_status_count);
+      row.insertCell().textContent = formatDateTime(item.latest_job_time);
+    });
+  }
 }
 
 function renderDistribution(host, rows = [], nameKey, limit = 8) {
@@ -548,15 +2974,11 @@ function renderRobotVitals(robots) {
     statusCell.className = 'status-detail';
     const status = document.createElement('span');
     status.className = `status-pill ${robotVisualState(robot)}`;
-    status.textContent = robot.has_current_snapshot
-      ? (robot.current_status || 'Status not reported')
-      : 'No operating snapshot';
+    status.textContent = String(robot.data_freshness_status || 'MISSING').replaceAll('_', ' ');
     statusCell.append(status);
-    if (robot.has_current_snapshot && !String(robot.current_status || '').trim()) {
-      const masterState = document.createElement('small');
-      masterState.textContent = `Master status: ${robot.master_status || '--'}`;
-      statusCell.append(masterState);
-    }
+    const freshnessDetail = document.createElement('small');
+    freshnessDetail.textContent = `DWS load ${formatDataAge(robot.status_dws_load_time || robot.dws_load_time)}`;
+    statusCell.append(freshnessDetail);
 
     const batteryCell = row.insertCell();
     batteryCell.className = batteryClass(robot.battery_soc);
@@ -565,54 +2987,57 @@ function renderRobotVitals(robots) {
     const batteryDetail = document.createElement('small');
     const voltage = robot.battery_voltage == null ? '--' : `${formatNumber(robot.battery_voltage, 2)}V`;
     const current = robot.battery_current == null ? '--' : `${formatNumber(robot.battery_current, 2)}A`;
-    batteryDetail.textContent = `${voltage} · ${current} · ${robot.charging_status || 'Charging status --'}`;
+    batteryDetail.textContent = robot.battery_freshness_status === 'CURRENT'
+      ? `${voltage} · ${current} · hourly average`
+      : `Suppressed · ${String(robot.battery_freshness_status || 'MISSING').replaceAll('_', ' ')}`;
     batteryCell.append(batteryValue, batteryDetail);
 
     const taskCell = row.insertCell();
     taskCell.className = 'task-detail';
     const taskValue = document.createElement('strong');
-    taskValue.textContent = hasActiveJob(robot) ? robot.job_id : 'No active job';
+    taskValue.textContent = 'Not available';
     const taskDetail = document.createElement('small');
-    taskDetail.textContent = robot.job_id
-      ? `Latest record: ${robot.job_id} · ${robot.job_status || 'Status --'}`
-      : `Task status: ${robot.job_status || '--'}`;
+    taskDetail.textContent = 'Current task is not stored in DWS daily aggregates';
     taskCell.append(taskValue, taskDetail);
 
     const modeCell = row.insertCell();
     modeCell.className = 'mode-detail';
     const modeId = document.createElement('strong');
-    modeId.textContent = `Mode ${robot.current_mode_id || '--'}`;
+    modeId.textContent = 'Not available';
     const modeDetail = document.createElement('small');
-    modeDetail.textContent = robot.current_mode || robot.source_current_mode || 'Mode dictionary not matched';
+    modeDetail.textContent = 'Current mode is not stored in DWS hourly aggregates';
     modeCell.append(modeId, modeDetail);
 
     const rssiCell = row.insertCell();
     rssiCell.className = wifiFreshnessClass(robot);
+    if (hasRssiMeasurementIssue(robot)) rssiCell.classList.add('rssi-measurement-issue');
     rssiCell.textContent = robot.current_rssi == null ? '--' : `${formatNumber(robot.current_rssi)} dBm`;
     const quality = document.createElement('small');
-    quality.textContent = robot.current_wifi_quality == null ? 'Quality --' : `Quality ${formatNumber(robot.current_wifi_quality)}`;
+    quality.textContent = robot.wifi_freshness_status === 'CURRENT'
+      ? 'Latest DWS hourly average'
+      : `Suppressed · ${String(robot.wifi_freshness_status || 'MISSING').replaceAll('_', ' ')}`;
     rssiCell.append(quality);
 
     const zeroCell = row.insertCell();
     zeroCell.className = zeroSignalClass(robot.zero_signal_rate);
-    zeroCell.textContent = formatPercent(robot.zero_signal_rate, 2);
+    zeroCell.textContent = '--';
     const zeroCount = document.createElement('small');
-    zeroCount.textContent = `${formatNumber(robot.zero_signal_sample_count)} / ${formatNumber(robot.wifi_sample_count)} samples`;
+    zeroCount.textContent = 'Not measurable from DWS hourly data';
     zeroCell.append(zeroCount);
 
     const apCell = row.insertCell();
-    apCell.textContent = robot.current_wifi_ap || '--';
+    apCell.textContent = 'Not available';
     const riskAp = document.createElement('small');
-    riskAp.textContent = robot.highest_zero_signal_ap ? `Most zero signals: ${robot.highest_zero_signal_ap}` : 'No attributable zero-signal access point';
+    riskAp.textContent = 'AP identity is not stored in DWS hourly data';
     apCell.append(riskAp);
 
     row.insertCell().textContent = robotPoiSummary(robot);
 
     const timeCell = row.insertCell();
-    timeCell.className = dataTimeClass(robot.latest_data_time);
-    timeCell.textContent = formatDateTime(robot.latest_data_time);
+    timeCell.className = dataTimeClass(robot.status_dws_load_time || robot.dws_load_time);
+    timeCell.textContent = formatDateTime(robot.status_dws_load_time || robot.dws_load_time);
     const freshness = document.createElement('small');
-    freshness.textContent = 'Latest of status, battery and WiFi';
+    freshness.textContent = `Status event ${formatDateTime(robot.status_event_time)}`;
     timeCell.append(freshness);
   });
 }
@@ -629,7 +3054,10 @@ function renderLowBatteryRisk(robots) {
     const cell = row.insertCell();
     cell.colSpan = 6;
     cell.className = 'empty-cell';
-    cell.textContent = 'No robots are currently at or below the 20% low-battery threshold';
+    const currentBatteryCount = robots.filter((robot) => robot.battery_freshness_status === 'CURRENT').length;
+    cell.textContent = currentBatteryCount
+      ? 'No freshness-gated DWS hourly battery average is at or below 20%'
+      : `Battery values are suppressed because no robot currently passes the ${formatNumber(state.dashboard?.staleMinutes || 30)}-minute DWS freshness gate`;
     return;
   }
 
@@ -654,81 +3082,13 @@ function renderLowBatteryRisk(robots) {
   });
 }
 
-function renderWifiRisk(rows) {
-  elements.wifiRiskBody.replaceChildren();
-  if (!rows.length) {
-    const row = elements.wifiRiskBody.insertRow();
-    const cell = row.insertCell();
-    cell.colSpan = 7;
-    cell.className = 'empty-cell';
-    cell.textContent = 'No access points meet the minimum sample threshold in this range';
-    return;
-  }
-
-  rows.forEach((item) => {
-    const row = elements.wifiRiskBody.insertRow();
-    row.insertCell().textContent = item.wifi_ap || '--';
-
-    const riskCell = row.insertCell();
-    const risk = document.createElement('span');
-    const level = String(item.risk_level || 'STABLE').toLowerCase();
-    risk.className = `risk-pill ${level === 'critical' ? 'critical' : level === 'warning' ? 'warning' : ''}`;
-    risk.textContent = level === 'critical' ? 'Critical' : level === 'warning' ? 'Warning' : 'Stable';
-    riskCell.append(risk);
-
-    const zeroCell = row.insertCell();
-    zeroCell.className = zeroSignalClass(item.zero_signal_rate);
-    zeroCell.textContent = formatPercent(item.zero_signal_rate, 2);
-    row.insertCell().textContent = `${formatNumber(item.zero_signal_sample_count)} / ${formatNumber(item.wifi_sample_count)}`;
-    row.insertCell().textContent = formatNumber(item.affected_robot_count);
-    row.insertCell().textContent = item.avg_valid_rssi == null ? '--' : `${formatNumber(item.avg_valid_rssi, 1)} dBm`;
-    row.insertCell().textContent = formatDateTime(item.last_sample_time);
-  });
-}
-
 function renderTasks(robots) {
-  const tasks = [...robots]
-    .sort((a, b) => {
-      const activeOrder = Number(hasActiveJob(b)) - Number(hasActiveJob(a));
-      if (activeOrder !== 0) return activeOrder;
-      const onlineOrder = Number(normalizedOnlineStatus(b.online_status) === 'online')
-        - Number(normalizedOnlineStatus(a.online_status) === 'online');
-      if (onlineOrder !== 0) return onlineOrder;
-      return String(a.robot_name || a.robot_code || '').localeCompare(String(b.robot_name || b.robot_code || ''), 'en');
-    })
-    .slice(0, 50);
   elements.taskTableBody.replaceChildren();
-  if (!tasks.length) {
-    const row = elements.taskTableBody.insertRow();
-    const cell = row.insertCell();
-    cell.colSpan = 4;
-    cell.className = 'empty-cell';
-    cell.textContent = 'No robot task snapshot is available';
-    return;
-  }
-
-  tasks.forEach((robot) => {
-    const row = elements.taskTableBody.insertRow();
-    row.addEventListener('click', () => selectRobot(robot.robot_code));
-    row.insertCell().textContent = robot.robot_code || '--';
-    const taskCell = row.insertCell();
-    taskCell.className = 'task-detail';
-    const taskName = document.createElement('strong');
-    taskName.textContent = hasActiveJob(robot) ? (robot.job_id || '--') : 'No active job';
-    const taskRoute = document.createElement('small');
-    taskRoute.textContent = `POI: ${robotPoiSummary(robot)}`;
-    taskCell.append(taskName, taskRoute);
-    const statusCell = row.insertCell();
-    statusCell.textContent = robot.job_status || '--';
-    statusCell.className = hasActiveJob(robot) ? 'wifi-current' : 'wifi-stale';
-    const modeCell = row.insertCell();
-    modeCell.className = 'task-mode';
-    const modeId = document.createElement('strong');
-    modeId.textContent = `ID ${robot.current_mode_id || '--'}`;
-    const modeDetail = document.createElement('small');
-    modeDetail.textContent = robot.current_mode || '--';
-    modeCell.append(modeId, modeDetail);
-  });
+  const row = elements.taskTableBody.insertRow();
+  const cell = row.insertCell();
+  cell.colSpan = 4;
+  cell.className = 'empty-cell';
+  cell.textContent = 'Current task state is not stored in non-snapshot DWS tables. Use the DWS daily task trend and workload analysis above.';
 }
 
 function renderTaskFailureOutcomes(rows) {
@@ -791,7 +3151,7 @@ function renderAlerts(robots) {
   elements.alertList.replaceChildren();
   if (!reasons.length) {
     elements.alertList.className = 'alert-list empty-state';
-    elements.alertList.textContent = 'No low-battery, no-signal or device-reported causes are present';
+    elements.alertList.textContent = 'No delayed-telemetry, low-battery, no-signal or device-reported causes are present';
     return;
   }
 
@@ -1047,8 +3407,27 @@ function buildExportRows(dataset) {
   const data = state.dashboard || {};
   const summary = data.summary || {};
   const robots = data.robots || [];
+  const profile = state.robotProfile || {};
+  const selectedProfileRobot = robots.find(
+    (robot) => String(robot.master_robot_id) === String(state.selectedRobotId)
+  );
 
   switch (dataset) {
+    case 'analysis':
+      return (data.analysis?.priorityDiagnostics || []).map((diagnostic) => ({
+        Robot_ID: diagnostic.robotId,
+        Robot_Type: diagnostic.robotType,
+        Phenomenon: diagnostic.phenomenon,
+        Most_Likely_Explanation: diagnostic.diagnosis,
+        Confidence: diagnostic.confidence,
+        Severity: diagnostic.severity,
+        Evidence: (diagnostic.evidence || []).join('; '),
+        Recommended_Actions: (diagnostic.recommendedActions || []).join('; '),
+        Alternative_Causes: (diagnostic.alternativeCauses || []).join('; '),
+        Triggered_Rules: (diagnostic.ruleIds || []).join('; '),
+        Rule_Version: data.analysis?.ruleVersion,
+        Analysis_Generated_At: data.analysis?.generatedAt
+      }));
     case 'overview': {
       const totals = (data.jobTrend || []).reduce((result, row) => ({
         completed: result.completed + asNumber(row.completed_status_count),
@@ -1056,6 +3435,7 @@ function buildExportRows(dataset) {
       }), { completed: 0, failed: 0 });
       const finished = totals.completed + totals.failed;
       return [{
+        Robot_Type_Filter: robotTypeLabel(),
         Analysis_Window: state.window.label,
         Dashboard_Generated_At: data.generatedAt,
         Status_Data_Time: summary.source_anchor_time || summary.latest_source_event_time,
@@ -1088,6 +3468,7 @@ function buildExportRows(dataset) {
     case 'low-battery-risk':
       return robots.filter(isLowBattery).map((robot) => ({
         Robot_ID: robotIdentifier(robot),
+        Robot_Type: robot.robot_type,
         Master_Data_ID: robot.master_robot_id,
         Battery_Percent: robot.battery_soc,
         Battery_Voltage_V: robot.battery_voltage,
@@ -1172,9 +3553,94 @@ function buildExportRows(dataset) {
         Current_RSSI: robot.current_rssi,
         Cause_Data_Time: cause.dataTime
       })));
+    case 'robot-profile':
+      return selectedProfileRobot ? [{
+        Analysis_Window: state.window.label,
+        Robot_Type: selectedProfileRobot.robot_type,
+        Robot_ID: robotIdentifier(selectedProfileRobot),
+        Master_Data_ID: selectedProfileRobot.master_robot_id,
+        Serial_Number: selectedProfileRobot.robot_serial_number,
+        Current_Status: selectedProfileRobot.current_status,
+        Online_Status: selectedProfileRobot.online_status,
+        Battery_Percent: selectedProfileRobot.battery_soc,
+        Voltage_V: selectedProfileRobot.battery_voltage,
+        Current_A: selectedProfileRobot.battery_current,
+        Charging_Status: selectedProfileRobot.charging_status,
+        Current_Job: selectedProfileRobot.job_id,
+        Job_Status: selectedProfileRobot.job_status,
+        Operating_Mode_ID: selectedProfileRobot.current_mode_id,
+        Operating_Mode: selectedProfileRobot.current_mode,
+        Current_RSSI: selectedProfileRobot.current_rssi,
+        WiFi_Quality: selectedProfileRobot.current_wifi_quality,
+        Access_Point: selectedProfileRobot.current_wifi_ap,
+        Map: selectedProfileRobot.map_code,
+        Current_Position: selectedProfileRobot.station_code,
+        Target_Position: selectedProfileRobot.target_station_code,
+        Alert_Causes: robotAlertCauses(selectedProfileRobot).map((cause) => `${cause.code}: ${cause.reason}`).join('; '),
+        Latest_Data_Time: selectedProfileRobot.latest_data_time,
+        Status_Data_Time: selectedProfileRobot.status_event_time || selectedProfileRobot.source_event_time,
+        Battery_Data_Time: selectedProfileRobot.battery_event_time,
+        WiFi_Data_Time: selectedProfileRobot.latest_wifi_time,
+        Task_Data_Time: selectedProfileRobot.job_event_time,
+        DWS_Load_Time: selectedProfileRobot.dws_load_time
+      }] : [];
+    case 'profile-battery':
+      return (profile.batteryTrend || []).map((row) => ({
+        Robot_ID: robotIdentifier(selectedProfileRobot),
+        Statistical_Hour: row.stat_hour,
+        Sample_Count: row.sample_count,
+        Average_Battery_Percent: row.avg_battery_soc,
+        Minimum_Battery_Percent: row.min_battery_soc,
+        Maximum_Battery_Percent: row.max_battery_soc,
+        Charging_Sample_Count: row.charging_sample_count
+      }));
+    case 'profile-wifi':
+      return (profile.wifiTrend || []).map((row) => ({
+        Robot_ID: robotIdentifier(selectedProfileRobot),
+        Statistical_Hour: row.stat_hour,
+        Sample_Count: row.sample_count,
+        Average_RSSI: row.avg_rssi,
+        Minimum_RSSI: row.min_rssi,
+        Maximum_RSSI: row.max_rssi,
+        Zero_Signal_Sample_Count: row.zero_signal_sample_count,
+        Zero_Signal_Rate_Percent: row.zero_signal_rate,
+        Weak_Signal_Sample_Count: row.weak_signal_sample_count
+      }));
+    case 'profile-status':
+      return (profile.statusTrend || []).map((row) => ({
+        Robot_ID: robotIdentifier(selectedProfileRobot),
+        Statistical_Hour: row.stat_hour,
+        Status_Sample_Count: row.sample_count,
+        Online_Sample_Count: row.online_sample_count,
+        Error_Sample_Count: row.error_sample_count,
+        Average_Speed_Meters_Per_Second: row.avg_speed_mps,
+        Maximum_Speed_Meters_Per_Second: row.max_speed_mps
+      }));
+    case 'profile-jobs':
+      return (profile.jobTrend || []).map((row) => ({
+        Robot_ID: robotIdentifier(selectedProfileRobot),
+        Statistical_Date: row.stat_date,
+        Job_Record_Count: row.job_count,
+        Distinct_Job_Count: row.distinct_job_count,
+        Completed_Status_Count: row.completed_status_count,
+        Failed_Status_Count: row.failed_status_count
+      }));
+    case 'profile-task-breakdown':
+      return (profile.taskBreakdown || []).map((row) => ({
+        Robot_ID: robotIdentifier(selectedProfileRobot),
+        Task_Type: row.job_type_code,
+        Operating_Mode_ID: row.robot_mode_id,
+        Operating_Mode: row.robot_mode_detail,
+        Task_Count: row.job_count,
+        Completed_Status_Count: row.completed_status_count,
+        Failed_Status_Count: row.failed_status_count,
+        Latest_Task_Time: row.latest_job_time,
+        Failure_Root_Cause: 'Not captured by the source job history table'
+      }));
     case 'tasks':
       return robots.map((robot) => ({
         Robot_ID: robotIdentifier(robot),
+        Robot_Type: robot.robot_type,
         Job_ID: robot.job_id,
         Subjob_ID: robot.subjob_id,
         Job_Status: robot.job_status,
@@ -1188,6 +3654,7 @@ function buildExportRows(dataset) {
     case 'robots':
       return filteredRobots().map((robot) => ({
         Robot_ID: robotIdentifier(robot),
+        Robot_Type: robot.robot_type,
         Master_Data_ID: robot.master_robot_id,
         Serial_Number: robot.robot_serial_number,
         Current_Status: robot.current_status,
@@ -1290,7 +3757,7 @@ function exportDataset(dataset) {
   const lines = [columns.map(csvCell).join(',')];
   rows.forEach((row) => lines.push(columns.map((column) => csvCell(row[column])).join(',')));
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  downloadBlob(`\uFEFF${lines.join('\r\n')}`, 'text/csv;charset=utf-8', `amr-${dataset}-${state.window.key}-${stamp}.csv`);
+  downloadBlob(`\uFEFF${lines.join('\r\n')}`, 'text/csv;charset=utf-8', `robot-${state.robotType.toLowerCase()}-${dataset}-${state.window.key}-${stamp}.csv`);
   showToast(`Downloaded: ${rows.length} rows`);
 }
 
@@ -1301,24 +3768,71 @@ function exportAllData() {
   }
   const payload = {
     exportedAt: new Date().toISOString(),
+    selectedRobotType: state.robotType,
     selectedWindow: state.window,
-    sourceNote: 'IOT2020 DWS dashboard response; WiFi detail window is capped at 24 hours.',
+    sourceNote: 'IOT2020 DWS dashboard response; WiFi detail uses strict ODS Running-task matching and supports an exact window up to 30 days.',
     dashboard: state.dashboard
   };
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  downloadBlob(JSON.stringify(payload, null, 2), 'application/json;charset=utf-8', `amr-dashboard-all-${state.window.key}-${stamp}.json`);
+  downloadBlob(JSON.stringify(payload, null, 2), 'application/json;charset=utf-8', `robot-dashboard-${state.robotType.toLowerCase()}-${state.window.key}-${stamp}.json`);
   showToast('Downloaded all current dashboard data');
 }
 
 elements.refreshButton.addEventListener('click', () => loadDashboard({ announce: true }));
-elements.syncButton.addEventListener('click', syncCurrentSnapshot);
+elements.syncButton.addEventListener('click', refreshDwsData);
 elements.exportAllButton.addEventListener('click', exportAllData);
 elements.robotSearch.addEventListener('input', () => renderRobotVitals(state.dashboard?.robots || []));
+function selectRobotProfile(robotId) {
+  state.selectedRobotId = robotId || null;
+  state.robotProfile = null;
+  elements.profileRobotSelect.value = robotId || '';
+  activateView('robot-profile');
+}
+elements.profileRobotSelect.addEventListener('change', () => selectRobotProfile(elements.profileRobotSelect.value));
 elements.mapSelect.addEventListener('change', () => {
   state.selectedMapCode = elements.mapSelect.value || null;
   renderMap(state.dashboard?.robots || []);
 });
-elements.rangeSelect.addEventListener('change', () => loadDashboard({ announce: true }));
+elements.wifiPoiSelect.addEventListener('change', () => {
+  state.selectedWifiPoi = elements.wifiPoiSelect.value || 'ALL';
+  renderRunningWifiAnalysis(state.dashboard?.wifiRunningAnalysis || {});
+});
+elements.wifiRobotSelect.addEventListener('change', () => {
+  state.selectedWifiRobot = elements.wifiRobotSelect.value || 'ALL';
+  state.selectedWifiPoi = 'ALL';
+  renderRunningWifiAnalysis(state.dashboard?.wifiRunningAnalysis || {});
+});
+elements.wifiApplyWindow.addEventListener('click', () => {
+  const start = String(elements.wifiStartTime.value || '').trim();
+  const end = String(elements.wifiEndTime.value || '').trim();
+  if (!start || !end) {
+    showToast('Choose both exact analysis start and end times', 'error');
+    return;
+  }
+  state.wifiWindow = { isCustom: true, start, end };
+  state.selectedWifiRobot = 'ALL';
+  state.selectedWifiPoi = 'ALL';
+  loadDashboard({ announce: true });
+  loadTaskAnalytics();
+});
+elements.taskApplyWindow.addEventListener('click', () => {
+  loadTaskAnalytics({ announce: true });
+});
+elements.taskRobotToggle.addEventListener('click', () => {
+  const opening = elements.taskRobotMenu.hidden;
+  elements.taskRobotMenu.hidden = !opening;
+  elements.taskRobotToggle.setAttribute('aria-expanded', String(opening));
+});
+document.addEventListener('click', (event) => {
+  if (!elements.taskRobotMenu || elements.taskRobotMenu.hidden) return;
+  if (event.target.closest('.task-robot-picker')) return;
+  elements.taskRobotMenu.hidden = true;
+  elements.taskRobotToggle.setAttribute('aria-expanded', 'false');
+});
+elements.taskTopLimitSelect.addEventListener('change', () => {
+  state.taskTopLimit = Number(elements.taskTopLimitSelect.value) || 5;
+  if (state.taskAnalytics) renderTaskAnalytics(state.taskAnalytics);
+});
 document.querySelectorAll('[data-export]').forEach((button) => {
   button.addEventListener('click', () => exportDataset(button.dataset.export));
 });
@@ -1346,3 +3860,4 @@ window.setInterval(updateClock, 1000);
 const initialView = location.hash.slice(1);
 activateView(VIEW_META[initialView] ? initialView : 'overview', { updateHash: false });
 loadDashboard();
+loadTaskAnalytics();
