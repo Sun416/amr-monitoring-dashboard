@@ -2,7 +2,7 @@
 
 const path = require('node:path');
 const express = require('express');
-const { loadDashboard, loadTaskAnalytics, loadRobotProfile, checkDatabase } = require('./src/dashboard-service');
+const { loadDashboard, loadTaskAnalytics, loadProjectAnalytics, loadRobotProfile, checkDatabase } = require('./src/dashboard-service');
 const { closePool, DatabaseConfigurationError, parseInteger } = require('./src/db');
 const { executeDwsRefresh } = require('./src/dws-refresh-service');
 
@@ -60,6 +60,20 @@ app.get('/api/task-analytics', async (request, response, next) => {
       robotCodes: request.query.robots || request.query.robot
     });
     response.json(taskAnalytics);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/project-analytics', async (request, response, next) => {
+  try {
+    const projectAnalytics = await loadProjectAnalytics({
+      start: request.query.start,
+      end: request.query.end,
+      projectId: request.query.projectId,
+      jobId: request.query.jobId
+    });
+    response.json(projectAnalytics);
   } catch (error) {
     next(error);
   }

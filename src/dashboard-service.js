@@ -16,6 +16,8 @@ const wifiRunningAnalysisQueryPath = path.join(__dirname, 'wifi-running-analysis
 const wifiRunningAnalysisQuery = fs.readFileSync(wifiRunningAnalysisQueryPath, 'utf8');
 const taskAnalyticsQueryPath = path.join(__dirname, 'task-analytics-query.sql');
 const taskAnalyticsQuery = fs.readFileSync(taskAnalyticsQueryPath, 'utf8');
+const projectAnalyticsQueryPath = path.join(__dirname, 'project-analytics-query.sql');
+const projectAnalyticsQuery = fs.readFileSync(projectAnalyticsQueryPath, 'utf8');
 const { buildAnalysis } = require('./analysis-engine');
 const { buildWifiMinimumDiagnostics } = require('./wifi-minimum-diagnostic');
 const { buildWifiWeakSignalDiagnostics } = require('./wifi-weak-signal-diagnostic');
@@ -304,7 +306,57 @@ async function loadTaskAnalytics({ taskStart, taskEnd, robotCodes } = {}) {
     hourlyTrend: sets[2] || [],
     callingBoxes: sets[3] || [],
     assignedTasks: sets[4] || [],
-    stateExceptionDetails: sets[5] || []
+    stateExceptionDetails: sets[5] || [],
+    callingBoxHourly: sets[6] || [],
+    assignedTaskHourly: sets[7] || []
+  };
+}
+
+function normalizeOptionalId(value) {
+  const text = String(value === undefined || value === null ? '' : value).trim();
+  if (!text) return null;
+  const parsed = Number.parseInt(text, 10);
+  if (!Number.isSafeInteger(parsed) || String(parsed) !== text) {
+    const error = new Error('Project and task identifiers must be integers.');
+    error.code = 'INVALID_PROJECT_SCOPE';
+    error.statusCode = 400;
+    throw error;
+  }
+  return String(parsed);
+}
+
+/*
+  Project and task first. The robot is a breakdown of the selected scope here,
+  not the key the caller browses by.
+*/
+async function loadProjectAnalytics({ start, end, projectId, jobId } = {}) {
+  const pool = await getPool();
+  const request = pool.request();
+  request.multiple = true;
+  request.input('analysis_start_text', sql.NVarChar(23), String(start || '').trim() || null);
+  request.input('analysis_end_text', sql.NVarChar(23), String(end || '').trim() || null);
+  request.input('project_id_text', sql.NVarChar(20), normalizeOptionalId(projectId));
+  request.input('job_id_text', sql.NVarChar(20), normalizeOptionalId(jobId));
+
+  const result = await request.query(projectAnalyticsQuery);
+  const sets = result.recordsets || [];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    dataSource: 'DWD.fact_amr_queue joined to dbo.MA_AMR_Project, DWD.dim_amr_task and dbo.MA_AMR',
+    identityRule: 'Robot identity resolves through DWD.fact_amr_queue.robot_id = dbo.MA_AMR.id; robot_code is never used for display.',
+    metricAvailability: {
+      executionSeconds: 'AVAILABLE: summed from closed ODS.TA_AMR subjob runs linked by queue_id. DWD.fact_amr_queue.duration_seconds is NULL in the source and is not used.',
+      queueOutcome: 'AVAILABLE: DWD.fact_amr_queue.queue_status records the outcome only; the source has no root-cause field.',
+      openQueues: 'AVAILABLE: in_progress and pending queue records within the window.'
+    },
+    summary: sets[0]?.[0] || {},
+    projects: sets[1] || [],
+    tasks: sets[2] || [],
+    robots: sets[3] || [],
+    hourlyTrend: sets[4] || [],
+    outcomes: sets[5] || [],
+    recentQueues: sets[6] || []
   };
 }
 
@@ -374,6 +426,7 @@ async function checkDatabase() {
 module.exports = {
   loadDashboard,
   loadTaskAnalytics,
+  loadProjectAnalytics,
   loadRobotProfile,
   checkDatabase,
   normalizeWifiAnalysisWindow

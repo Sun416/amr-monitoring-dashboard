@@ -327,3 +327,96 @@ ORDER BY
     exception_hour.[data_unavailable_seconds] DESC,
     exception_hour.[stat_hour] DESC,
     exception_hour.[robot_code];
+
+/*
+    Hourly Calling Box series for the trend chart.
+    Restricted to the top labels by total count so the chart stays readable;
+    the leaderboard above still reports every label in the window.
+*/
+WITH top_calling_boxes AS
+(
+    SELECT TOP (6)
+        calling_box.[calling_box_label]
+    FROM [DWS].[dws_robot_calling_box_hourly] AS calling_box
+    WHERE calling_box.[stat_hour] >= @analysis_start
+      AND calling_box.[stat_hour] < @analysis_end
+      AND
+      (
+          NOT EXISTS (SELECT 1 FROM @selected_robots)
+          OR EXISTS
+          (
+              SELECT 1
+              FROM @selected_robots AS selected
+              WHERE selected.[robot_code] = calling_box.[robot_code]
+          )
+      )
+    GROUP BY calling_box.[calling_box_label]
+    ORDER BY SUM(calling_box.[calling_box_count]) DESC, calling_box.[calling_box_label]
+)
+SELECT
+    CONVERT(NVARCHAR(19), calling_box.[stat_hour], 120) AS [stat_hour],
+    calling_box.[calling_box_label],
+    SUM(calling_box.[calling_box_count]) AS [calling_box_count]
+FROM [DWS].[dws_robot_calling_box_hourly] AS calling_box
+INNER JOIN top_calling_boxes AS top_label
+    ON top_label.[calling_box_label] = calling_box.[calling_box_label]
+WHERE calling_box.[stat_hour] >= @analysis_start
+  AND calling_box.[stat_hour] < @analysis_end
+  AND
+  (
+      NOT EXISTS (SELECT 1 FROM @selected_robots)
+      OR EXISTS
+      (
+          SELECT 1
+          FROM @selected_robots AS selected
+          WHERE selected.[robot_code] = calling_box.[robot_code]
+      )
+  )
+GROUP BY calling_box.[stat_hour], calling_box.[calling_box_label]
+ORDER BY calling_box.[stat_hour], calling_box.[calling_box_label];
+
+/*
+    Hourly assigned-task series for the trend chart. Same top-N bounding.
+*/
+WITH top_assigned_tasks AS
+(
+    SELECT TOP (6)
+        task_hour.[task_label]
+    FROM [DWS].[dws_robot_assigned_task_hourly] AS task_hour
+    WHERE task_hour.[stat_hour] >= @analysis_start
+      AND task_hour.[stat_hour] < @analysis_end
+      AND
+      (
+          NOT EXISTS (SELECT 1 FROM @selected_robots)
+          OR EXISTS
+          (
+              SELECT 1
+              FROM @selected_robots AS selected
+              WHERE selected.[robot_code] = task_hour.[robot_code]
+          )
+      )
+    GROUP BY task_hour.[task_label]
+    ORDER BY SUM(task_hour.[assigned_task_count]) DESC, task_hour.[task_label]
+)
+SELECT
+    CONVERT(NVARCHAR(19), task_hour.[stat_hour], 120) AS [stat_hour],
+    task_hour.[task_label],
+    SUM(task_hour.[assigned_task_count]) AS [assigned_task_count],
+    SUM(task_hour.[completed_task_count]) AS [completed_task_count]
+FROM [DWS].[dws_robot_assigned_task_hourly] AS task_hour
+INNER JOIN top_assigned_tasks AS top_label
+    ON top_label.[task_label] = task_hour.[task_label]
+WHERE task_hour.[stat_hour] >= @analysis_start
+  AND task_hour.[stat_hour] < @analysis_end
+  AND
+  (
+      NOT EXISTS (SELECT 1 FROM @selected_robots)
+      OR EXISTS
+      (
+          SELECT 1
+          FROM @selected_robots AS selected
+          WHERE selected.[robot_code] = task_hour.[robot_code]
+      )
+  )
+GROUP BY task_hour.[stat_hour], task_hour.[task_label]
+ORDER BY task_hour.[stat_hour], task_hour.[task_label];

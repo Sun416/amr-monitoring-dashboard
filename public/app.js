@@ -9,6 +9,15 @@ const state = {
   selectedMapCode: null,
   selectedWifiPoi: 'ALL',
   selectedWifiRobot: 'ALL',
+  /*
+    Multi-select filters for the Running-task WiFi chart.
+    Empty array means "all". The single-value selectedWifiRobot/selectedWifiPoi
+    above stay in sync for the downstream renderers that expect one value:
+    exactly one selection passes that value, zero or many pass 'ALL' and the
+    renderers filter on these arrays instead.
+  */
+  selectedWifiRobots: [],
+  selectedWifiPois: [],
   loading: false,
   currentView: 'overview',
   robotType: 'ALL',
@@ -17,19 +26,28 @@ const state = {
   taskAnalytics: null,
   taskRobots: [],
   taskTopLimit: 5,
-  taskRequestId: 0
+  taskRequestId: 0,
+  /*
+    Project and task first. These scope every panel in the projects view;
+    null means "no filter", so the view opens on the whole window.
+  */
+  projectAnalytics: null,
+  selectedProjectId: null,
+  selectedJobId: null,
+  projectRequestId: 0
 };
 
 const VIEW_META = {
   overview: { eyebrow: '01 · ANALYSIS CENTER', title: 'Analysis Center', description: 'Start with causes, supporting evidence and the next maintenance action.' },
-  operations: { eyebrow: '02 · OPERATIONS', title: 'Operating Status', description: 'Review status, mode and robot position.' },
-  tasks: { eyebrow: '03 · TASKS', title: 'Task Analytics', description: 'Review DWS utilization, idle causes, Calling Boxes, and assigned tasks.' },
-  energy: { eyebrow: '04 · ENERGY', title: 'Energy Analytics', description: 'Identify exact robot IDs at low-battery risk and review the trend.' },
-  network: { eyebrow: '05 · RUNNING WIFI', title: 'Running-Task WiFi Signal Analysis', description: 'Analyze signal trends, minimum-RSSI evidence, robot differences, and target-POI risks during Running tasks.' },
-  alarms: { eyebrow: '06 · ALERTS', title: 'Robot Alert Causes', description: 'See operational faults and telemetry-quality issues by robot ID.' },
-  robots: { eyebrow: '07 · ROBOT DETAILS', title: 'Robot Details', description: 'Search robot-level operating data in one place.' },
-  'robot-profile': { eyebrow: '08 · ROBOT PROFILE', title: 'Robot Profile', description: 'Select one Robot ID and review its complete current and historical status.' },
-  'data-quality': { eyebrow: '09 · DATA QUALITY', title: 'Data Quality', description: 'Review data freshness, lag and DWS load batches.' }
+  projects: { eyebrow: '02 · PROJECT & TASK', title: 'Project and Task Analysis', description: 'Filter a project or task first, then review how it ran and which robots carried it.' },
+  operations: { eyebrow: '03 · OPERATIONS', title: 'Operating Status', description: 'Review status, mode and robot position.' },
+  tasks: { eyebrow: '04 · TASKS', title: 'Task Analytics', description: 'Review DWS utilization, idle causes, Calling Boxes, and assigned tasks.' },
+  energy: { eyebrow: '05 · ENERGY', title: 'Energy Analytics', description: 'Identify exact robot IDs at low-battery risk and review the trend.' },
+  network: { eyebrow: '06 · RUNNING WIFI', title: 'Running-Task WiFi Signal Analysis', description: 'Analyze signal trends, minimum-RSSI evidence, robot differences, and target-POI risks during Running tasks.' },
+  alarms: { eyebrow: '07 · ALERTS', title: 'Robot Alert Causes', description: 'See operational faults and telemetry-quality issues by robot ID.' },
+  robots: { eyebrow: '08 · ROBOT DETAILS', title: 'Robot Details', description: 'Search robot-level operating data in one place.' },
+  'robot-profile': { eyebrow: '09 · ROBOT PROFILE', title: 'Robot Profile', description: 'Select one Robot ID and review its complete current and historical status.' },
+  'data-quality': { eyebrow: '10 · DATA QUALITY', title: 'Data Quality', description: 'Review data freshness, lag and DWS load batches.' }
 };
 
 const elements = Object.fromEntries(
@@ -45,7 +63,8 @@ const elements = Object.fromEntries(
     'workloadGroupSummary', 'workloadAnalysisBody', 'operationalAnalysisBody', 'measurementGapList',
     'fleetStatusDonut', 'fleetRobotGrid', 'priorityRepairSummary',
     'runningWifiFreshness', 'wifiStartTime', 'wifiEndTime', 'wifiApplyWindow',
-    'wifiConclusion', 'wifiRobotSelect', 'wifiPoiSelect',
+    'wifiConclusion', 'wifiRobotToggle', 'wifiRobotToggleText', 'wifiRobotMenu',
+    'wifiPoiToggle', 'wifiPoiToggleText', 'wifiPoiMenu', 'wifiRobotMulti', 'wifiPoiMulti',
     'runningWifiChartSubtitle', 'runningWifiTrendChart', 'runningWifiMinimumDiagnostic', 'runningWifiNarrative',
     'weakSignalRateSubtitle', 'weakSignalRateChart', 'weakSignalTimelineSubtitle', 'weakSignalTimelineChart',
     'wifiPointStrengthSubtitle', 'wifiPointStrengthChart',
@@ -62,6 +81,12 @@ const elements = Object.fromEntries(
     'taskStateExceptionPanel', 'taskStateExceptionSummary', 'taskStateExceptionBody',
     'taskUsageSubtitle', 'taskUsageChart', 'taskIdleTrendChart', 'taskIdleCauseChart',
     'taskCallingBoxTitle', 'taskCallingBoxList', 'taskAssignedTitle', 'taskAssignedList',
+    'taskCallingBoxTrendChart', 'taskCallingBoxTrendSubtitle', 'taskAssignedTrendChart', 'taskAssignedTrendSubtitle',
+    'projectSelect', 'projectTaskSelect', 'projectClearFilter', 'projectDataScope',
+    'projectQueueValue', 'projectQueueDetail', 'projectCompletionValue', 'projectCompletionDetail',
+    'projectExecutionValue', 'projectExecutionDetail', 'projectRobotValue', 'projectRobotIds',
+    'projectListBody', 'projectTaskTitle', 'projectTaskBody', 'projectRobotTitle', 'projectRobotBody',
+    'projectOutcomeChart', 'projectTrendSubtitle', 'projectTrendChart', 'projectRecordBody',
     'alertList', 'alertBadge', 'robotMapLayer', 'mapEmpty', 'mapSelect', 'mappedRobotCount', 'mapCodeCount',
     'selectedRobot', 'robotVitalsBody', 'batteryChart',
     'jobChart', 'alarmChart', 'queueChart', 'batteryTrendAnchor', 'batchTableBody',
@@ -908,6 +933,139 @@ function renderLegacyTaskAnalytics(data) {
   elements.taskAssignedTitle.textContent = `Top ${topLimit} Assigned Tasks`;
   renderTaskRanking(elements.taskCallingBoxList, (data.callingBoxes || []).slice(0, topLimit), 'calling_box_count', (row) => `${formatNumber(row.robot_count)} robots · latest ${formatTaskLocalDateTime(row.last_called_at)}`);
   renderTaskRanking(elements.taskAssignedList, (data.assignedTasks || []).slice(0, topLimit), 'assigned_task_count', (row) => `${formatNumber(row.completed_task_count)} completed · ${formatNumber(row.robot_count)} robots`);
+  renderTaskVolumeCharts(data);
+}
+
+/*
+  Hourly series chart for Calling Box and assigned-task counts.
+  Deliberately mirrors renderTaskUsageTrend so the three Task Analytics trend
+  charts read the same way; series come from the top-N labels bounded in SQL.
+*/
+function renderTaskLabelTrend(host, rows, options = {}) {
+  if (!host) return;
+  host.replaceChildren();
+  const labelKey = options.labelKey;
+  const valueKey = options.valueKey;
+  const scopedRows = rows.filter((row) => row.stat_hour && row[labelKey]);
+  if (!scopedRows.length) {
+    const empty = document.createElement('div');
+    empty.className = 'chart-empty';
+    empty.textContent = options.emptyText || 'No hourly evidence is available for the selected period.';
+    host.append(empty);
+    return;
+  }
+
+  const hourLabels = [...new Set(scopedRows.map((row) => row.stat_hour))].sort();
+  const seriesMap = new Map();
+  scopedRows.forEach((row) => {
+    const name = String(row[labelKey]);
+    if (!seriesMap.has(name)) seriesMap.set(name, new Map());
+    const bucket = seriesMap.get(name);
+    bucket.set(row.stat_hour, (bucket.get(row.stat_hour) || 0) + asNumber(row[valueKey]));
+  });
+
+  const palette = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2'];
+  const series = [...seriesMap.entries()]
+    .sort((a, b) => {
+      const total = (entry) => [...entry[1].values()].reduce((sum, value) => sum + value, 0);
+      return total(b) - total(a);
+    })
+    .map(([name, values], index) => ({ name, values, color: palette[index % palette.length] }));
+
+  const max = Math.max(...series.flatMap((item) => hourLabels.map((label) => item.values.get(label) || 0)), 1);
+  const width = 780;
+  const height = 250;
+  const margin = { left: 48, right: 18, top: 16, bottom: 34 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const x = (index) => margin.left + (index / Math.max(hourLabels.length - 1, 1)) * plotWidth;
+  const y = (value) => margin.top + (1 - value / max) * plotHeight;
+  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': options.ariaLabel || 'Hourly trend' });
+
+  [0, 0.5, 1].forEach((ratio) => {
+    const lineY = margin.top + ratio * plotHeight;
+    svg.append(svgElement('line', { x1: margin.left, y1: lineY, x2: width - margin.right, y2: lineY, class: 'chart-grid-line' }));
+    const axis = svgElement('text', { x: margin.left - 7, y: lineY + 4, 'text-anchor': 'end', class: 'chart-axis-label' });
+    axis.textContent = formatNumber(max * (1 - ratio), 0);
+    svg.append(axis);
+  });
+
+  series.forEach((item) => {
+    const points = hourLabels.map((label, index) => ({ x: x(index), y: y(item.values.get(label) || 0) }));
+    const line = svgElement('path', { d: buildMonotoneCurvePath(points), class: 'chart-line task-usage-line' });
+    line.style.stroke = item.color;
+    svg.append(line);
+    hourLabels.forEach((label, index) => {
+      if (index % Math.max(1, Math.ceil(hourLabels.length / 18)) !== 0 && index !== hourLabels.length - 1) return;
+      const point = svgElement('circle', { cx: x(index), cy: y(item.values.get(label) || 0), r: 2.2, class: 'chart-point' });
+      point.style.stroke = item.color;
+      const title = svgElement('title');
+      title.textContent = `${item.name} · ${formatShortTime(label)}: ${formatNumber(item.values.get(label) || 0)} ${options.unit || ''}`.trim();
+      point.append(title);
+      svg.append(point);
+    });
+  });
+
+  const xTickCount = Math.min(7, hourLabels.length);
+  const xTickIndexes = [...new Set(Array.from({ length: xTickCount }, (_, index) => (
+    Math.round((index * (hourLabels.length - 1)) / Math.max(xTickCount - 1, 1))
+  )))];
+  xTickIndexes.forEach((index) => {
+    const tick = svgElement('text', {
+      x: x(index),
+      y: height - 8,
+      'text-anchor': index === 0 ? 'start' : (index === hourLabels.length - 1 ? 'end' : 'middle'),
+      class: 'chart-axis-label'
+    });
+    tick.textContent = formatShortTime(hourLabels[index]);
+    svg.append(tick);
+  });
+  host.append(svg);
+
+  const legend = document.createElement('div');
+  legend.className = 'task-chart-legend';
+  series.forEach((item) => {
+    const legendItem = document.createElement('span');
+    const swatch = document.createElement('i');
+    swatch.style.background = item.color;
+    legendItem.append(swatch, document.createTextNode(item.name));
+    legendItem.title = item.name;
+    legend.append(legendItem);
+  });
+  host.append(legend);
+}
+
+function renderTaskVolumeCharts(data) {
+  const callingRows = data.callingBoxHourly || [];
+  const assignedRows = data.assignedTaskHourly || [];
+
+  if (elements.taskCallingBoxTrendSubtitle) {
+    const labels = new Set(callingRows.map((row) => row.calling_box_label));
+    elements.taskCallingBoxTrendSubtitle.textContent = labels.size
+      ? `Call count by hour · top ${labels.size} Calling Boxes in the selected period`
+      : 'Call count by hour. Series are the top Calling Boxes in the selected period.';
+  }
+  renderTaskLabelTrend(elements.taskCallingBoxTrendChart, callingRows, {
+    labelKey: 'calling_box_label',
+    valueKey: 'calling_box_count',
+    unit: 'calls',
+    ariaLabel: 'Hourly Calling Box call count by label',
+    emptyText: 'No Calling Box records are available for the selected period and robot.'
+  });
+
+  if (elements.taskAssignedTrendSubtitle) {
+    const labels = new Set(assignedRows.map((row) => row.task_label));
+    elements.taskAssignedTrendSubtitle.textContent = labels.size
+      ? `Assignment count by hour · top ${labels.size} assigned tasks in the selected period`
+      : 'Assignment count by hour. Series are the top assigned tasks in the selected period.';
+  }
+  renderTaskLabelTrend(elements.taskAssignedTrendChart, assignedRows, {
+    labelKey: 'task_label',
+    valueKey: 'assigned_task_count',
+    unit: 'assignments',
+    ariaLabel: 'Hourly assigned task count by label',
+    emptyText: 'No assigned task records are available for the selected period and robot.'
+  });
 }
 
 function renderTaskAnalytics(data) {
@@ -972,6 +1130,382 @@ function renderTaskAnalytics(data) {
     'assigned_task_count',
     (row) => `${formatNumber(row.completed_task_count)} completed / ${formatNumber(row.robot_count)} robots`
   );
+  renderTaskVolumeCharts(data);
+}
+
+/*
+  Project and task view.
+
+  The whole view is driven by state.selectedProjectId / state.selectedJobId.
+  Every reload asks the server for the same scope, so the project table, task
+  table, robot breakdown, trend and record list can never disagree about which
+  queue records they describe.
+*/
+async function loadProjectAnalytics({ announce = false } = {}) {
+  const requestId = ++state.projectRequestId;
+  const analysisWindow = selectedWifiAnalysisWindow();
+  const params = new URLSearchParams();
+  if (analysisWindow.start && analysisWindow.end) {
+    params.set('start', analysisWindow.start);
+    params.set('end', analysisWindow.end);
+  }
+  if (state.selectedProjectId) params.set('projectId', state.selectedProjectId);
+  if (state.selectedJobId) params.set('jobId', state.selectedJobId);
+
+  if (elements.projectDataScope) elements.projectDataScope.textContent = 'Loading project and task data…';
+  try {
+    const data = await requestJson(`/api/project-analytics${params.toString() ? `?${params}` : ''}`);
+    if (requestId !== state.projectRequestId) return;
+    state.projectAnalytics = data;
+    renderProjectAnalytics(data);
+    if (announce) showToast('Project and task analysis updated');
+  } catch (error) {
+    if (requestId !== state.projectRequestId) return;
+    if (elements.projectDataScope) {
+      elements.projectDataScope.dataset.tone = 'critical';
+      elements.projectDataScope.textContent = error.message;
+    }
+    showToast(error.message, 'error');
+  }
+}
+
+function setProjectScope({ projectId, jobId }) {
+  state.selectedProjectId = projectId ? String(projectId) : null;
+  state.selectedJobId = jobId ? String(jobId) : null;
+  if (elements.projectSelect) elements.projectSelect.value = state.selectedProjectId || '';
+  if (elements.projectTaskSelect) elements.projectTaskSelect.value = state.selectedJobId || '';
+  loadProjectAnalytics();
+}
+
+function fillSelect(select, options, selectedValue) {
+  if (!select) return;
+  select.replaceChildren();
+  options.forEach((option) => {
+    const node = document.createElement('option');
+    node.value = option.value;
+    node.textContent = option.label;
+    select.append(node);
+  });
+  select.value = selectedValue || '';
+}
+
+function populateProjectSelectors(data) {
+  fillSelect(
+    elements.projectSelect,
+    [{ value: '', label: `All projects (${(data.projects || []).length})` }].concat(
+      (data.projects || [])
+        .filter((row) => row.project_id !== null && row.project_id !== undefined)
+        .map((row) => ({
+          value: String(row.project_id),
+          label: `${row.project_name} · ${formatNumber(row.queue_count)} records`
+        }))
+    ),
+    state.selectedProjectId
+  );
+
+  const tasks = (data.tasks || []).filter((row) => row.job_id !== null && row.job_id !== undefined);
+  /*
+    A task selected under one project does not exist under another. Drop the
+    selection rather than showing a filter the current data cannot support.
+  */
+  const available = new Set(tasks.map((row) => String(row.job_id)));
+  if (state.selectedJobId && !available.has(state.selectedJobId)) state.selectedJobId = null;
+  fillSelect(
+    elements.projectTaskSelect,
+    [{ value: '', label: `All tasks (${tasks.length})` }].concat(
+      tasks.map((row) => ({
+        value: String(row.job_id),
+        label: `${row.task_name} · ${formatNumber(row.queue_count)} records`
+      }))
+    ),
+    state.selectedJobId
+  );
+}
+
+function projectEmptyRow(host, columnCount, message) {
+  const row = document.createElement('tr');
+  const cell = document.createElement('td');
+  cell.colSpan = columnCount;
+  cell.className = 'empty-cell';
+  cell.textContent = message;
+  row.append(cell);
+  host.append(row);
+}
+
+function projectTableRow(cells, { onActivate = null, active = false } = {}) {
+  const row = document.createElement('tr');
+  if (active) row.classList.add('is-selected');
+  if (onActivate) {
+    row.classList.add('is-clickable');
+    row.tabIndex = 0;
+    row.addEventListener('click', onActivate);
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onActivate();
+      }
+    });
+  }
+  cells.forEach((cell) => {
+    const node = document.createElement('td');
+    node.textContent = cell === null || cell === undefined ? '--' : String(cell);
+    row.append(node);
+  });
+  return row;
+}
+
+function renderProjectList(rows = []) {
+  const host = elements.projectListBody;
+  if (!host) return;
+  host.replaceChildren();
+  if (!rows.length) {
+    projectEmptyRow(host, 8, 'No project records in this window');
+    return;
+  }
+  rows.forEach((row) => {
+    const projectId = row.project_id === null || row.project_id === undefined ? null : String(row.project_id);
+    host.append(projectTableRow(
+      [
+        row.project_name,
+        formatNumber(row.queue_count),
+        formatNumber(row.task_count),
+        formatNumber(row.robot_count),
+        formatNumber(row.completed_count),
+        formatNumber(row.unsuccessful_count),
+        formatSeconds(row.execution_seconds),
+        formatTaskLocalDateTime(row.latest_event_time)
+      ],
+      {
+        active: projectId !== null && projectId === state.selectedProjectId,
+        onActivate: projectId === null
+          ? null
+          : () => setProjectScope({
+            projectId: projectId === state.selectedProjectId ? null : projectId,
+            jobId: null
+          })
+      }
+    ));
+  });
+}
+
+function renderProjectTasks(rows = []) {
+  const host = elements.projectTaskBody;
+  if (!host) return;
+  host.replaceChildren();
+  if (!rows.length) {
+    projectEmptyRow(host, 9, 'No task records in this scope');
+    return;
+  }
+  rows.forEach((row) => {
+    const jobId = row.job_id === null || row.job_id === undefined ? null : String(row.job_id);
+    host.append(projectTableRow(
+      [
+        row.task_name,
+        row.project_name,
+        formatNumber(row.queue_count),
+        formatNumber(row.robot_count),
+        formatNumber(row.completed_count),
+        formatNumber(row.unsuccessful_count),
+        formatNumber(row.open_count),
+        row.average_execution_seconds === null || row.average_execution_seconds === undefined
+          ? 'Not available'
+          : formatSeconds(row.average_execution_seconds),
+        formatTaskLocalDateTime(row.latest_event_time)
+      ],
+      {
+        active: jobId !== null && jobId === state.selectedJobId,
+        onActivate: jobId === null
+          ? null
+          : () => setProjectScope({
+            projectId: state.selectedProjectId
+              || (row.project_id === null || row.project_id === undefined ? null : String(row.project_id)),
+            jobId: jobId === state.selectedJobId ? null : jobId
+          })
+      }
+    ));
+  });
+}
+
+function renderProjectRobots(rows = []) {
+  const host = elements.projectRobotBody;
+  if (!host) return;
+  host.replaceChildren();
+  if (!rows.length) {
+    projectEmptyRow(host, 6, 'No robot carried this work in the selected scope');
+    return;
+  }
+  rows.forEach((row) => {
+    host.append(projectTableRow([
+      row.robot_name,
+      formatNumber(row.queue_count),
+      formatNumber(row.task_count),
+      formatNumber(row.completed_count),
+      formatNumber(row.unsuccessful_count),
+      row.average_execution_seconds === null || row.average_execution_seconds === undefined
+        ? 'Not available'
+        : formatSeconds(row.average_execution_seconds)
+    ]));
+  });
+}
+
+function renderProjectOutcomes(rows = []) {
+  const host = elements.projectOutcomeChart;
+  if (!host) return;
+  host.replaceChildren();
+  const total = rows.reduce((sum, row) => sum + asNumber(row.queue_count), 0);
+  if (!total) {
+    host.classList.add('empty-state');
+    host.textContent = 'No recorded outcomes in the selected scope.';
+    return;
+  }
+  host.classList.remove('empty-state');
+  const tones = {
+    completed: '#059669',
+    failed: '#dc2626',
+    cancelled: '#d97706',
+    canceled: '#d97706',
+    in_progress: '#2563eb',
+    pending: '#7c3aed'
+  };
+  const palette = ['#0891b2', '#db2777', '#65a30d', '#a16207'];
+  let fallbackIndex = 0;
+  const outcomes = rows.map((row) => {
+    const status = String(row.queue_status || 'unknown');
+    return {
+      label: status,
+      value: asNumber(row.queue_count),
+      robots: asNumber(row.robot_count),
+      color: tones[status] || palette[fallbackIndex++ % palette.length]
+    };
+  });
+
+  let cursor = 0;
+  const segments = outcomes.map((item) => {
+    const end = cursor + (100 * item.value / total);
+    const segment = `${item.color} ${cursor}% ${end}%`;
+    cursor = end;
+    return segment;
+  });
+  const donut = document.createElement('div');
+  donut.className = 'task-idle-pie';
+  donut.style.background = `conic-gradient(${segments.join(', ')})`;
+  donut.setAttribute('role', 'img');
+  donut.setAttribute('aria-label', `Recorded outcomes across ${formatNumber(total)} task records`);
+  const legend = document.createElement('div');
+  legend.className = 'task-idle-legend';
+  outcomes.forEach((item) => {
+    const row = document.createElement('div');
+    const swatch = document.createElement('i');
+    swatch.style.background = item.color;
+    const label = document.createElement('span');
+    label.textContent = `${item.label} (${formatNumber(item.robots)} robots)`;
+    const value = document.createElement('b');
+    value.textContent = formatNumber(item.value);
+    row.append(swatch, label, value);
+    legend.append(row);
+  });
+  host.append(donut, legend);
+}
+
+function renderProjectRecords(rows = []) {
+  const host = elements.projectRecordBody;
+  if (!host) return;
+  host.replaceChildren();
+  if (!rows.length) {
+    projectEmptyRow(host, 8, 'No task records in the selected scope');
+    return;
+  }
+  rows.forEach((row) => {
+    host.append(projectTableRow([
+      formatTaskLocalDateTime(row.event_time),
+      row.project_name,
+      row.task_name,
+      row.robot_name,
+      row.queue_status || 'unknown',
+      row.calling_box_name || 'Not linked',
+      asNumber(row.execution_seconds) > 0 ? formatSeconds(row.execution_seconds) : 'Not available',
+      `${formatNumber(row.subjob_success_count)} / ${formatNumber(row.subjob_run_count)}`
+    ]));
+  });
+}
+
+function renderProjectAnalytics(data) {
+  const summary = data.summary || {};
+  populateProjectSelectors(data);
+
+  const projectLabel = state.selectedProjectId
+    ? (data.projects || []).find((row) => String(row.project_id) === state.selectedProjectId)?.project_name
+      || `Project ${state.selectedProjectId}`
+    : 'All projects';
+  const taskLabel = state.selectedJobId
+    ? (data.tasks || []).find((row) => String(row.job_id) === state.selectedJobId)?.task_name
+      || `Job ${state.selectedJobId}`
+    : 'All tasks';
+
+  if (elements.projectDataScope) {
+    elements.projectDataScope.dataset.tone = 'neutral';
+    elements.projectDataScope.textContent = `${projectLabel} / ${taskLabel} · ${formatTaskLocalDateTime(summary.analysis_start)} to ${formatTaskLocalDateTime(summary.analysis_end)} · window totals: ${formatNumber(summary.queue_count)} task records across ${formatNumber(summary.project_count)} projects, ${formatNumber(summary.task_count)} tasks and ${formatNumber(summary.robot_count)} robots. Execution time is summed from closed subjob runs; the source records outcome status only and holds no root-cause field.`;
+  }
+
+  /*
+    The KPI strip describes the selected scope, not the whole window, so it is
+    summed from the scoped robot breakdown rather than the window summary.
+  */
+  const robotRows = data.robots || [];
+  const scopedRecords = robotRows.reduce((sum, row) => sum + asNumber(row.queue_count), 0);
+  const scopedCompleted = robotRows.reduce((sum, row) => sum + asNumber(row.completed_count), 0);
+  const scopedUnsuccessful = robotRows.reduce((sum, row) => sum + asNumber(row.unsuccessful_count), 0);
+  const scopedExecution = robotRows.reduce((sum, row) => sum + asNumber(row.execution_seconds), 0);
+  const recordedOutcomes = scopedCompleted + scopedUnsuccessful;
+
+  if (elements.projectQueueValue) elements.projectQueueValue.textContent = formatNumber(scopedRecords);
+  if (elements.projectQueueDetail) elements.projectQueueDetail.textContent = `${projectLabel} / ${taskLabel}`;
+  if (elements.projectCompletionValue) {
+    elements.projectCompletionValue.textContent = recordedOutcomes > 0
+      ? formatPercent((100 * scopedCompleted) / recordedOutcomes)
+      : 'Not available';
+  }
+  if (elements.projectCompletionDetail) {
+    elements.projectCompletionDetail.textContent = recordedOutcomes > 0
+      ? `${formatNumber(scopedCompleted)} completed / ${formatNumber(scopedUnsuccessful)} unsuccessful`
+      : 'No terminal outcome recorded in this scope';
+  }
+  if (elements.projectExecutionValue) elements.projectExecutionValue.textContent = formatSeconds(scopedExecution);
+  if (elements.projectExecutionDetail) {
+    elements.projectExecutionDetail.textContent = 'Summed from closed subjob runs linked by queue ID';
+  }
+  if (elements.projectRobotValue) elements.projectRobotValue.textContent = formatNumber(robotRows.length);
+  if (elements.projectRobotIds) {
+    const names = robotRows.slice(0, 6).map((row) => row.robot_name);
+    elements.projectRobotIds.textContent = names.length
+      ? `${names.join(', ')}${robotRows.length > names.length ? ` +${robotRows.length - names.length} more` : ''}`
+      : '--';
+  }
+
+  if (elements.projectTaskTitle) {
+    elements.projectTaskTitle.textContent = state.selectedProjectId ? `Tasks in ${projectLabel}` : 'Tasks in Scope';
+  }
+  if (elements.projectRobotTitle) {
+    elements.projectRobotTitle.textContent = state.selectedJobId
+      ? `Robots Carrying ${taskLabel}`
+      : `Robots Carrying ${projectLabel}`;
+  }
+  if (elements.projectTrendSubtitle) {
+    elements.projectTrendSubtitle.textContent = `${projectLabel} / ${taskLabel} · queue records by hour, one series per robot.`;
+  }
+
+  renderProjectList(data.projects || []);
+  renderProjectTasks(data.tasks || []);
+  renderProjectRobots(robotRows);
+  renderProjectOutcomes(data.outcomes || []);
+  renderTaskLabelTrend(elements.projectTrendChart, data.hourlyTrend || [], {
+    labelKey: 'robot_name',
+    valueKey: 'queue_count',
+    unit: 'records',
+    ariaLabel: 'Task record trend by robot',
+    emptyText: 'No hourly task records are available for the selected project and task.'
+  });
+  renderProjectRecords(data.recentQueues || []);
 }
 
 function populateRobotProfileSelector(robots) {
@@ -1569,6 +2103,72 @@ function renderAnalysis(analysis, readiness = {}, robots = []) {
   renderPriorityRepair(analysis);
 }
 
+/*
+  Re-aggregate per-robot-target rows into fleet-shaped target rows for a subset
+  of robots. Sample counts are summed and the average RSSI is weighted by valid
+  sample count, so a multi-robot selection reads the same way as byTarget does.
+*/
+function aggregateTargetRowsForRobots(robotTargetRows, selectedRobotSet) {
+  const byTarget = new Map();
+  robotTargetRows
+    .filter((row) => selectedRobotSet.has(String(row.robot_code)))
+    .forEach((row) => {
+      const key = String(row.poi_target || '');
+      if (!key) return;
+      const entry = byTarget.get(key) || {
+        poi_target: row.poi_target,
+        sample_count: 0,
+        valid_signal_sample_count: 0,
+        zero_signal_sample_count: 0,
+        weightedSignalTotal: 0,
+        minimum_valid_rssi: null,
+        robots: new Set()
+      };
+      const validCount = asNumber(row.valid_signal_sample_count);
+      const average = Number(row.average_valid_rssi);
+      if (validCount > 0 && Number.isFinite(average)) {
+        entry.weightedSignalTotal += average * validCount;
+        entry.valid_signal_sample_count += validCount;
+      }
+      entry.sample_count += asNumber(row.sample_count);
+      entry.zero_signal_sample_count += asNumber(row.zero_signal_sample_count);
+      const minimum = Number(row.minimum_valid_rssi);
+      if (Number.isFinite(minimum)) {
+        entry.minimum_valid_rssi = entry.minimum_valid_rssi == null
+          ? minimum
+          : Math.min(entry.minimum_valid_rssi, minimum);
+      }
+      entry.robots.add(String(row.robot_code));
+      byTarget.set(key, entry);
+    });
+
+  return [...byTarget.values()].map((entry) => ({
+    poi_target: entry.poi_target,
+    sample_count: entry.sample_count,
+    valid_signal_sample_count: entry.valid_signal_sample_count,
+    zero_signal_sample_count: entry.zero_signal_sample_count,
+    minimum_valid_rssi: entry.minimum_valid_rssi,
+    average_valid_rssi: entry.valid_signal_sample_count > 0
+      ? entry.weightedSignalTotal / entry.valid_signal_sample_count
+      : null,
+    robot_count: entry.robots.size
+  }));
+}
+
+/*
+  Multi-select variant of aggregateRunningWifiTrend. An empty selection array
+  means "no filter", matching the checkbox dropdown where nothing ticked = all.
+*/
+function aggregateRunningWifiTrendMulti(rows, selectedPois, selectedRobots) {
+  const poiSet = new Set(selectedPois);
+  const robotSet = new Set(selectedRobots);
+  const filtered = rows.filter((row) => (
+    (poiSet.size === 0 || poiSet.has(String(row.poi_target)))
+    && (robotSet.size === 0 || robotSet.has(String(row.robot_code)))
+  ));
+  return aggregateRunningWifiTrend(filtered, 'ALL', 'ALL');
+}
+
 function aggregateRunningWifiTrend(rows, selectedPoi, selectedRobot) {
   const buckets = new Map();
   rows
@@ -1942,13 +2542,22 @@ function renderWifiPointComparison(payload) {
   const availableRobots = (payload.byRobot || [])
     .map((row) => String(row.robot_code))
     .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
-  const selectedRobots = state.selectedWifiRobot === 'ALL'
-    ? availableRobots
-    : availableRobots.filter((robotCode) => robotCode === state.selectedWifiRobot);
+  // Empty selection means all robots; otherwise honour the checkbox selection.
+  const selectedRobots = state.selectedWifiRobots.length
+    ? availableRobots.filter((robotCode) => state.selectedWifiRobots.includes(robotCode))
+    : availableRobots;
   const selected = new Set(selectedRobots);
-  const rows = (payload.byRobotTarget || []).filter((row) => selected.has(String(row.robot_code)));
+  const poiFilter = new Set(state.selectedWifiPois);
+  const rows = (payload.byRobotTarget || []).filter((row) => (
+    selected.has(String(row.robot_code))
+    && (poiFilter.size === 0 || poiFilter.has(String(row.poi_target)))
+  ));
   const sampleCount = rows.reduce((total, row) => total + asNumber(row.sample_count), 0);
-  const scopeLabel = state.selectedWifiRobot === 'ALL' ? 'All eligible robots' : state.selectedWifiRobot;
+  const scopeLabel = !state.selectedWifiRobots.length
+    ? 'All eligible robots'
+    : state.selectedWifiRobots.length === 1
+      ? state.selectedWifiRobots[0]
+      : `${state.selectedWifiRobots.length} selected robots`;
   elements.wifiPointStrengthSubtitle.textContent = `${scopeLabel} · ${formatNumber(selectedRobots.length)} robots · ${formatNumber(rows.length)} robot-target POI pairs · ${formatNumber(sampleCount)} strict matched samples · one chart per robot`;
   renderWifiPointLineChart(
     elements.wifiPointStrengthChart,
@@ -2490,7 +3099,9 @@ function renderRunningWifiNarrative(payload, selectedPoi, selectedRobot, targetR
     );
     chip.type = 'button';
     chip.addEventListener('click', () => {
-      state.selectedWifiRobot = String(row.robot_code);
+      // Drill-down chip: narrow to this one robot and reset the target scope.
+      state.selectedWifiRobots = [String(row.robot_code)];
+      state.selectedWifiPois = [];
       renderRunningWifiAnalysis(state.dashboard?.wifiRunningAnalysis || {});
     });
     robotChips.append(chip);
@@ -2665,8 +3276,103 @@ function renderWifiConclusion(payload, selectedRobot, selectedPoi) {
   host.append(header, metrics, details);
 }
 
+/*
+  Checkbox dropdown for the Running-task WiFi filters.
+
+  No checkbox ticked means "all", which matches the previous 'ALL' option
+  without needing a sentinel entry in the list.
+*/
+function renderMultiSelect(menuHost, toggle, toggleText, values, selected, allLabel, onChange) {
+  if (!menuHost || !toggle || !toggleText) return;
+  menuHost.replaceChildren();
+
+  if (!values.length) {
+    toggle.disabled = true;
+    toggleText.textContent = allLabel;
+    menuHost.append(textNode('div', 'multi-select-empty', 'No options are available for the current range.'));
+    return;
+  }
+  toggle.disabled = false;
+
+  const actions = document.createElement('div');
+  actions.className = 'multi-select-actions';
+  const selectAll = document.createElement('button');
+  selectAll.type = 'button';
+  selectAll.textContent = 'Select all';
+  selectAll.addEventListener('click', () => onChange([...values]));
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.textContent = 'Clear';
+  clear.addEventListener('click', () => onChange([]));
+  actions.append(selectAll, clear);
+  menuHost.append(actions);
+
+  const selectedSet = new Set(selected);
+  values.forEach((value) => {
+    const option = document.createElement('label');
+    option.className = 'multi-select-option';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.value = value;
+    box.checked = selectedSet.has(value);
+    box.addEventListener('change', () => {
+      const next = new Set(selectedSet);
+      if (box.checked) next.add(value);
+      else next.delete(value);
+      onChange(values.filter((item) => next.has(item)));
+    });
+    const caption = document.createElement('span');
+    caption.textContent = value;
+    caption.title = value;
+    option.append(box, caption);
+    menuHost.append(option);
+  });
+
+  // No selection and every option selected both mean "no filter".
+  if (!selected.length || selected.length === values.length) {
+    toggleText.textContent = allLabel;
+  } else if (selected.length === 1) {
+    toggleText.textContent = selected[0];
+  } else {
+    toggleText.textContent = `${selected.length} selected`;
+  }
+  toggleText.parentElement.title = selected.length ? selected.join(', ') : allLabel;
+}
+
+function closeMultiSelectMenus(except) {
+  [[elements.wifiRobotToggle, elements.wifiRobotMenu], [elements.wifiPoiToggle, elements.wifiPoiMenu]]
+    .forEach(([toggle, menu]) => {
+      if (!toggle || !menu || menu === except) return;
+      menu.hidden = true;
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function bindMultiSelectToggle(toggle, menu) {
+  if (!toggle || !menu) return;
+  toggle.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const open = menu.hidden;
+    closeMultiSelectMenus(open ? menu : null);
+    menu.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+  });
+  menu.addEventListener('click', (event) => event.stopPropagation());
+}
+
+/*
+  Keep the legacy single-value state in sync so the existing renderers keep
+  working: one selection behaves exactly as before, zero or several fall back
+  to 'ALL' and the array is applied by the callers that support it.
+*/
+function syncWifiLegacySelection(values, availableCount) {
+  if (values.length === 1) return values[0];
+  if (values.length && values.length < availableCount) return 'ALL';
+  return 'ALL';
+}
+
 function renderRunningWifiAnalysis(payload) {
-  if (!elements.runningWifiTrendChart || !elements.wifiPoiSelect || !elements.wifiRobotSelect) return;
+  if (!elements.runningWifiTrendChart || !elements.wifiPoiToggle || !elements.wifiRobotToggle) return;
   const summary = payload.summary || {};
   const byRobot = payload.byRobot || [];
   const robotTargets = payload.byRobotTarget || [];
@@ -2686,18 +3392,17 @@ function renderRunningWifiAnalysis(payload) {
   if (rangeIsLimited) {
     state.selectedWifiRobot = 'ALL';
     state.selectedWifiPoi = 'ALL';
-    elements.wifiRobotSelect.replaceChildren();
-    elements.wifiPoiSelect.replaceChildren();
-    const robotOption = document.createElement('option');
-    robotOption.value = 'ALL';
-    robotOption.textContent = 'Long-range data not loaded';
-    const poiOption = document.createElement('option');
-    poiOption.value = 'ALL';
-    poiOption.textContent = 'Long-range data not loaded';
-    elements.wifiRobotSelect.append(robotOption);
-    elements.wifiPoiSelect.append(poiOption);
-    elements.wifiRobotSelect.disabled = true;
-    elements.wifiPoiSelect.disabled = true;
+    state.selectedWifiRobots = [];
+    state.selectedWifiPois = [];
+    elements.wifiRobotMenu.replaceChildren();
+    elements.wifiPoiMenu.replaceChildren();
+    elements.wifiRobotMenu.append(textNode('div', 'multi-select-empty', 'Long-range data not loaded'));
+    elements.wifiPoiMenu.append(textNode('div', 'multi-select-empty', 'Long-range data not loaded'));
+    elements.wifiRobotToggleText.textContent = 'Long-range data not loaded';
+    elements.wifiPoiToggleText.textContent = 'Long-range data not loaded';
+    elements.wifiRobotToggle.disabled = true;
+    elements.wifiPoiToggle.disabled = true;
+    closeMultiSelectMenus(null);
     elements.runningWifiFreshness.dataset.tone = 'stale';
     elements.runningWifiFreshness.textContent = 'Long-range query is not enabled';
     elements.runningWifiChartSubtitle.textContent = `${state.window.label} is synchronized; the current safe ODS query limit is ${formatNumber(actualAnalysisHours)} hours.`;
@@ -2717,64 +3422,90 @@ function renderRunningWifiAnalysis(payload) {
     return;
   }
 
-  elements.wifiRobotSelect.disabled = false;
-  elements.wifiPoiSelect.disabled = false;
-  const availableRobots = new Set(byRobot.map((row) => String(row.robot_code)));
-  if (state.selectedWifiRobot !== 'ALL' && !availableRobots.has(state.selectedWifiRobot)) {
-    state.selectedWifiRobot = 'ALL';
-  }
-  const targetRows = state.selectedWifiRobot === 'ALL'
+  elements.wifiRobotToggle.disabled = false;
+  elements.wifiPoiToggle.disabled = false;
+
+  const robotValues = byRobot
+    .map((row) => String(row.robot_code))
+    .sort((a, b) => a.localeCompare(b, 'en'));
+  const availableRobots = new Set(robotValues);
+  // Drop selections that the current time range no longer offers.
+  state.selectedWifiRobots = state.selectedWifiRobots.filter((code) => availableRobots.has(code));
+  state.selectedWifiRobot = syncWifiLegacySelection(state.selectedWifiRobots, robotValues.length);
+
+  // A single robot selection keeps the per-robot target rows; otherwise use the
+  // fleet-wide target rows and narrow them by the selected robots.
+  const robotFilterActive = state.selectedWifiRobots.length > 0
+    && state.selectedWifiRobots.length < robotValues.length;
+  const selectedRobotSet = new Set(state.selectedWifiRobots);
+  const targetRows = !robotFilterActive
     ? (payload.byTarget || [])
-    : robotTargets
-      .filter((row) => String(row.robot_code) === state.selectedWifiRobot)
-      .map((row) => ({ ...row, robot_count: 1 }));
-  const availableTargets = new Set(targetRows.map((row) => String(row.poi_target)));
-  if (state.selectedWifiPoi !== 'ALL' && !availableTargets.has(state.selectedWifiPoi)) {
-    state.selectedWifiPoi = 'ALL';
-  }
+    : state.selectedWifiRobots.length === 1
+      ? robotTargets
+        .filter((row) => selectedRobotSet.has(String(row.robot_code)))
+        .map((row) => ({ ...row, robot_count: 1 }))
+      : aggregateTargetRowsForRobots(robotTargets, selectedRobotSet);
 
-  elements.wifiRobotSelect.replaceChildren();
-  const allRobotsOption = document.createElement('option');
-  allRobotsOption.value = 'ALL';
+  const targetValues = targetRows
+    .map((row) => String(row.poi_target))
+    .sort((a, b) => a.localeCompare(b, 'en'));
+  const availableTargets = new Set(targetValues);
+  state.selectedWifiPois = state.selectedWifiPois.filter((poi) => availableTargets.has(poi));
+  state.selectedWifiPoi = syncWifiLegacySelection(state.selectedWifiPois, targetValues.length);
+
   const activeRobotCount = asNumber(state.dashboard?.summary?.active_robot_count);
-  allRobotsOption.textContent = activeRobotCount > 0
-    ? `Eligible (${formatNumber(byRobot.length)} / ${formatNumber(activeRobotCount)})`
-    : `Eligible (${formatNumber(byRobot.length)})`;
-  elements.wifiRobotSelect.append(allRobotsOption);
-  byRobot
-    .slice()
-    .sort((a, b) => String(a.robot_code).localeCompare(String(b.robot_code), 'en'))
-    .forEach((row) => {
-      const option = document.createElement('option');
-      option.value = String(row.robot_code);
-      option.textContent = `${row.robot_code} · n=${formatNumber(row.sample_count)}`;
-      elements.wifiRobotSelect.append(option);
-    });
-  elements.wifiRobotSelect.value = state.selectedWifiRobot;
+  const allRobotsLabel = activeRobotCount > 0
+    ? `All eligible (${formatNumber(byRobot.length)} / ${formatNumber(activeRobotCount)})`
+    : `All eligible (${formatNumber(byRobot.length)})`;
 
-  elements.wifiPoiSelect.replaceChildren();
-  const allOption = document.createElement('option');
-  allOption.value = 'ALL';
-  allOption.textContent = `All targets (${formatNumber(targetRows.length)})`;
-  elements.wifiPoiSelect.append(allOption);
-  targetRows
-    .slice()
-    .sort((a, b) => String(a.poi_target).localeCompare(String(b.poi_target), 'en'))
-    .forEach((row) => {
-      const option = document.createElement('option');
-      option.value = String(row.poi_target);
-      option.textContent = `${row.poi_target} · n=${formatNumber(row.sample_count)}`;
-      elements.wifiPoiSelect.append(option);
-    });
-  elements.wifiPoiSelect.value = state.selectedWifiPoi;
+  renderMultiSelect(
+    elements.wifiRobotMenu,
+    elements.wifiRobotToggle,
+    elements.wifiRobotToggleText,
+    robotValues,
+    state.selectedWifiRobots,
+    allRobotsLabel,
+    (next) => {
+      state.selectedWifiRobots = next;
+      // Robot scope changed, so target options are recomputed on the next pass.
+      state.selectedWifiPois = [];
+      renderRunningWifiAnalysis(state.dashboard?.wifiRunningAnalysis || {});
+    }
+  );
 
-  const scopeLabel = [
-    state.selectedWifiRobot === 'ALL' ? 'All robots' : state.selectedWifiRobot,
-    state.selectedWifiPoi === 'ALL' ? 'All targets' : state.selectedWifiPoi
-  ].join(' · ');
+  renderMultiSelect(
+    elements.wifiPoiMenu,
+    elements.wifiPoiToggle,
+    elements.wifiPoiToggleText,
+    targetValues,
+    state.selectedWifiPois,
+    `All targets (${formatNumber(targetValues.length)})`,
+    (next) => {
+      state.selectedWifiPois = next;
+      renderRunningWifiAnalysis(state.dashboard?.wifiRunningAnalysis || {});
+    }
+  );
+
+  const robotScopeLabel = !robotFilterActive
+    ? 'All robots'
+    : state.selectedWifiRobots.length === 1
+      ? state.selectedWifiRobots[0]
+      : `${state.selectedWifiRobots.length} robots`;
+  const poiFilterActive = state.selectedWifiPois.length > 0
+    && state.selectedWifiPois.length < targetValues.length;
+  const poiScopeLabel = !poiFilterActive
+    ? 'All targets'
+    : state.selectedWifiPois.length === 1
+      ? state.selectedWifiPois[0]
+      : `${state.selectedWifiPois.length} targets`;
+  const scopeLabel = [robotScopeLabel, poiScopeLabel].join(' · ');
   elements.runningWifiChartSubtitle.textContent = `${scopeLabel} · ${formatNumber(summary.analysis_window_hours)} hours · ${formatNumber(summary.bucket_minutes)}-minute buckets · averages exclude zero-signal samples`;
 
-  const trend = aggregateRunningWifiTrend(payload.trend || [], state.selectedWifiPoi, state.selectedWifiRobot);
+  const trend = aggregateRunningWifiTrendMulti(
+    payload.trend || [],
+    state.selectedWifiPois,
+    state.selectedWifiRobots
+  );
   renderRunningWifiTrend(elements.runningWifiTrendChart, trend);
   renderRunningWifiNarrative(payload, state.selectedWifiPoi, state.selectedWifiRobot, targetRows);
   renderWeakSignalRate(payload, state.selectedWifiRobot, state.selectedWifiPoi);
@@ -3413,6 +4144,33 @@ function buildExportRows(dataset) {
   );
 
   switch (dataset) {
+    case 'project-analytics': {
+      /*
+        Export the task rows of the current scope: the project/task axis is what
+        this view is about, and each row already carries its robot count.
+      */
+      const projectData = state.projectAnalytics || {};
+      return (projectData.tasks || []).map((row) => ({
+        Project: row.project_name,
+        Project_ID: row.project_id,
+        Task: row.task_name,
+        Job_ID: row.job_id,
+        Task_Records: row.queue_count,
+        Robots: row.robot_count,
+        Completed: row.completed_count,
+        Unsuccessful: row.unsuccessful_count,
+        Open: row.open_count,
+        Execution_Seconds: row.execution_seconds,
+        Average_Execution_Seconds: row.average_execution_seconds,
+        Subjob_Runs: row.subjob_run_count,
+        Latest_Record: row.latest_event_time,
+        Analysis_Start: projectData.summary?.analysis_start,
+        Analysis_End: projectData.summary?.analysis_end,
+        Selected_Project_ID: state.selectedProjectId || 'ALL',
+        Selected_Job_ID: state.selectedJobId || 'ALL',
+        Identity_Rule: projectData.identityRule
+      }));
+    }
     case 'analysis':
       return (data.analysis?.priorityDiagnostics || []).map((diagnostic) => ({
         Robot_ID: diagnostic.robotId,
@@ -3778,7 +4536,10 @@ function exportAllData() {
   showToast('Downloaded all current dashboard data');
 }
 
-elements.refreshButton.addEventListener('click', () => loadDashboard({ announce: true }));
+elements.refreshButton.addEventListener('click', () => {
+  loadDashboard({ announce: true });
+  loadProjectAnalytics();
+});
 elements.syncButton.addEventListener('click', refreshDwsData);
 elements.exportAllButton.addEventListener('click', exportAllData);
 elements.robotSearch.addEventListener('input', () => renderRobotVitals(state.dashboard?.robots || []));
@@ -3793,14 +4554,13 @@ elements.mapSelect.addEventListener('change', () => {
   state.selectedMapCode = elements.mapSelect.value || null;
   renderMap(state.dashboard?.robots || []);
 });
-elements.wifiPoiSelect.addEventListener('change', () => {
-  state.selectedWifiPoi = elements.wifiPoiSelect.value || 'ALL';
-  renderRunningWifiAnalysis(state.dashboard?.wifiRunningAnalysis || {});
-});
-elements.wifiRobotSelect.addEventListener('change', () => {
-  state.selectedWifiRobot = elements.wifiRobotSelect.value || 'ALL';
-  state.selectedWifiPoi = 'ALL';
-  renderRunningWifiAnalysis(state.dashboard?.wifiRunningAnalysis || {});
+// Checkbox dropdowns: option changes are wired in renderMultiSelect; these
+// bindings only open/close the menus.
+bindMultiSelectToggle(elements.wifiRobotToggle, elements.wifiRobotMenu);
+bindMultiSelectToggle(elements.wifiPoiToggle, elements.wifiPoiMenu);
+document.addEventListener('click', () => closeMultiSelectMenus(null));
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeMultiSelectMenus(null);
 });
 elements.wifiApplyWindow.addEventListener('click', () => {
   const start = String(elements.wifiStartTime.value || '').trim();
@@ -3812,12 +4572,29 @@ elements.wifiApplyWindow.addEventListener('click', () => {
   state.wifiWindow = { isCustom: true, start, end };
   state.selectedWifiRobot = 'ALL';
   state.selectedWifiPoi = 'ALL';
+  state.selectedWifiRobots = [];
+  state.selectedWifiPois = [];
   loadDashboard({ announce: true });
   loadTaskAnalytics();
+  loadProjectAnalytics();
 });
 elements.taskApplyWindow.addEventListener('click', () => {
   loadTaskAnalytics({ announce: true });
 });
+if (elements.projectSelect) {
+  elements.projectSelect.addEventListener('change', () => {
+    // Changing the project invalidates any task chosen under the previous one.
+    setProjectScope({ projectId: elements.projectSelect.value, jobId: null });
+  });
+}
+if (elements.projectTaskSelect) {
+  elements.projectTaskSelect.addEventListener('change', () => {
+    setProjectScope({ projectId: state.selectedProjectId, jobId: elements.projectTaskSelect.value });
+  });
+}
+if (elements.projectClearFilter) {
+  elements.projectClearFilter.addEventListener('click', () => setProjectScope({ projectId: null, jobId: null }));
+}
 elements.taskRobotToggle.addEventListener('click', () => {
   const opening = elements.taskRobotMenu.hidden;
   elements.taskRobotMenu.hidden = !opening;
@@ -3861,3 +4638,4 @@ const initialView = location.hash.slice(1);
 activateView(VIEW_META[initialView] ? initialView : 'overview', { updateHash: false });
 loadDashboard();
 loadTaskAnalytics();
+loadProjectAnalytics();

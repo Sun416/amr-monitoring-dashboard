@@ -794,6 +794,20 @@ td small { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1
 .actionable-panel tbody tr:hover { background: #fffaeb; }
 .task-failure-panel { margin-top: 0; }
 .legacy-task-layout { display: none; }
+
+/* Project and task view: project -> task -> robot drill-down. */
+.project-filter-bar { margin: 0 0 20px; justify-content: flex-start; }
+.project-table { min-width: 900px; }
+.project-task-table { min-width: 1020px; }
+.project-robot-table { min-width: 620px; }
+.project-record-table { min-width: 1000px; }
+tr.is-clickable { cursor: pointer; }
+tr.is-clickable:hover { background: #f2f6ff; }
+tr.is-clickable:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+tr.is-selected { background: #eaf1ff; box-shadow: inset 3px 0 0 var(--blue); }
+tr.is-selected td:first-child { font-weight: 700; }
+tr.is-selected:hover { background: #e2ecff; }
+
 .task-analytics-controls { display: flex; flex-wrap: wrap; align-items: end; justify-content: flex-end; gap: 10px; }
 .task-analytics-filter-bar { margin: 0 0 20px; }
 .task-analytics-controls label { display: grid; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 700; }
@@ -904,6 +918,83 @@ td small { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1
 .wifi-analysis-controls-standalone { margin-bottom: 14px; }
 .wifi-analysis-controls label, .wifi-chart-filters label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 700; }
 .wifi-chart-filters { display: flex; flex-wrap: wrap; align-items: end; justify-content: flex-end; gap: 10px; }
+/* Checkbox dropdown used by the Running-task WiFi robot and target POI filters. */
+.multi-select { position: relative; display: grid; gap: 5px; }
+.multi-select-caption { color: var(--muted); font-size: 10px; font-weight: 700; }
+.multi-select-toggle {
+  min-width: 170px;
+  max-width: 260px;
+  height: 36px;
+  padding: 0 30px 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff no-repeat right 11px center;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-size: 5px 5px, 5px 5px;
+  background-position: right 15px center, right 11px center;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.multi-select-toggle:hover { border-color: var(--accent, #2563eb); }
+.multi-select-toggle[aria-expanded="true"] { border-color: var(--accent, #2563eb); }
+.multi-select-toggle:disabled { background-color: #f3f4f6; color: var(--muted); cursor: not-allowed; }
+.multi-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 40;
+  min-width: 200px;
+  max-width: 300px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+}
+.multi-select-menu[hidden] { display: none; }
+.multi-select-actions {
+  display: flex;
+  gap: 6px;
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+.multi-select-actions button {
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.multi-select-actions button:hover { border-color: var(--accent, #2563eb); color: var(--accent, #2563eb); }
+.multi-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.multi-select-option:hover { background: #f1f5f9; }
+.multi-select-option input { flex-shrink: 0; margin: 0; cursor: pointer; }
+.multi-select-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.multi-select-empty { padding: 8px; color: var(--muted); font-size: 11px; }
+
 .wifi-analysis-controls select, .wifi-chart-filters select {
   min-width: 150px;
   height: 36px;

@@ -29,29 +29,32 @@
         <button class="nav-item active" type="button" data-view="overview">
           <span class="nav-index">01</span><span><strong>Analysis Center</strong><small>Causes, evidence and maintenance actions</small></span>
         </button>
+        <button class="nav-item" type="button" data-view="projects">
+          <span class="nav-index">02</span><span><strong>Project &amp; Task</strong><small>Filter a project or task, then see its robots</small></span>
+        </button>
         <button class="nav-item" type="button" data-view="operations">
-          <span class="nav-index">02</span><span><strong>Operations</strong><small>Status, mode and position</small></span>
+          <span class="nav-index">03</span><span><strong>Operations</strong><small>Status, mode and position</small></span>
         </button>
         <button class="nav-item" type="button" data-view="tasks">
-          <span class="nav-index">03</span><span><strong>Task Analytics</strong><small>DWS task and queue history</small></span>
+          <span class="nav-index">04</span><span><strong>Task Analytics</strong><small>DWS task and queue history</small></span>
         </button>
         <button class="nav-item" type="button" data-view="energy">
-          <span class="nav-index">04</span><span><strong>Energy</strong><small>Battery level and low-battery risk</small></span>
+          <span class="nav-index">05</span><span><strong>Energy</strong><small>Battery level and low-battery risk</small></span>
         </button>
         <button class="nav-item" type="button" data-view="network">
-          <span class="nav-index">05</span><span><strong>Running-Task WiFi Analysis</strong><small>Running-task RSSI diagnostics</small></span>
+          <span class="nav-index">06</span><span><strong>Running-Task WiFi Analysis</strong><small>Running-task RSSI diagnostics</small></span>
         </button>
         <button class="nav-item" type="button" data-view="alarms">
-          <span class="nav-index">06</span><span><strong>Robot Alert Causes</strong><small>Operational faults and telemetry-quality issues</small></span>
+          <span class="nav-index">07</span><span><strong>Robot Alert Causes</strong><small>Operational faults and telemetry-quality issues</small></span>
         </button>
         <button class="nav-item" type="button" data-view="robots">
-          <span class="nav-index">07</span><span><strong>Robot Details</strong><small>Robot-level operational data</small></span>
+          <span class="nav-index">08</span><span><strong>Robot Details</strong><small>Robot-level operational data</small></span>
         </button>
         <button class="nav-item" type="button" data-view="robot-profile">
-          <span class="nav-index">08</span><span><strong>Robot Profile</strong><small>One robot's complete status</small></span>
+          <span class="nav-index">09</span><span><strong>Robot Profile</strong><small>One robot's complete status</small></span>
         </button>
         <button class="nav-item" type="button" data-view="data-quality">
-          <span class="nav-index">09</span><span><strong>Data Quality</strong><small>Freshness and load batches</small></span>
+          <span class="nav-index">10</span><span><strong>Data Quality</strong><small>Freshness and load batches</small></span>
         </button>
       </nav>
 
@@ -148,18 +151,20 @@
                     <p id="runningWifiChartSubtitle">Average and minimum values; zero-signal records are shown separately as unusable samples.</p>
                   </div>
                   <div class="wifi-chart-filters">
-                    <label>
-                      <span>Robot</span>
-                      <select id="wifiRobotSelect" aria-label="Filter robots contributing WiFi signal data">
-                        <option value="ALL">All robots</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>Target POI</span>
-                      <select id="wifiPoiSelect" aria-label="Filter target POIs">
-                        <option value="ALL">All targets</option>
-                      </select>
-                    </label>
+                    <div class="multi-select" id="wifiRobotMulti">
+                      <span class="multi-select-caption">Robot</span>
+                      <button type="button" class="multi-select-toggle" id="wifiRobotToggle" aria-expanded="false" aria-haspopup="true" aria-label="Filter robots contributing WiFi signal data">
+                        <span id="wifiRobotToggleText">All robots</span>
+                      </button>
+                      <div class="multi-select-menu" id="wifiRobotMenu" role="group" aria-label="Robot options" hidden></div>
+                    </div>
+                    <div class="multi-select" id="wifiPoiMulti">
+                      <span class="multi-select-caption">Target POI</span>
+                      <button type="button" class="multi-select-toggle" id="wifiPoiToggle" aria-expanded="false" aria-haspopup="true" aria-label="Filter target POIs">
+                        <span id="wifiPoiToggleText">All targets</span>
+                      </button>
+                      <div class="multi-select-menu" id="wifiPoiMenu" role="group" aria-label="Target POI options" hidden></div>
+                    </div>
                   </div>
                 </header>
                 <div class="wifi-chart-legend" aria-label="Chart legend">
@@ -214,6 +219,47 @@
 
         </section>
 
+        <section class="view-panel" data-view-panel="projects" aria-labelledby="projectsHeading">
+          <div class="section-intro">
+            <div><span class="section-kicker">PROJECT &amp; TASK</span><h2 id="projectsHeading">Project and Task Analysis</h2><p>Pick a project, then a task, to see how that work ran and which robots carried it. Robots are a breakdown of the selected scope, not the entry point.</p></div>
+            <button class="download-button" type="button" data-export="project-analytics">Download CSV</button>
+          </div>
+
+          <div class="task-analytics-controls project-filter-bar">
+            <label><span>Project</span><select id="projectSelect" aria-label="Select project"><option value="">All projects</option></select></label>
+            <label><span>Task</span><select id="projectTaskSelect" aria-label="Select task"><option value="">All tasks</option></select></label>
+            <button id="projectClearFilter" class="button secondary compact-button" type="button">Clear</button>
+          </div>
+
+          <article class="task-data-scope" id="projectDataScope" data-tone="neutral">Loading project and task data…</article>
+
+          <div class="focus-strip task-kpi-strip four-column">
+            <div><span>Task Records</span><strong id="projectQueueValue">--</strong><small id="projectQueueDetail">Queue records in scope</small></div>
+            <div><span>Completion Rate</span><strong id="projectCompletionValue">--</strong><small id="projectCompletionDetail">Completed / recorded outcomes</small></div>
+            <div><span>Execution Time</span><strong id="projectExecutionValue">--</strong><small id="projectExecutionDetail">Closed subjob runs</small></div>
+            <div><span>Robots Involved</span><strong id="projectRobotValue">--</strong><small id="projectRobotIds">--</small></div>
+          </div>
+
+          <article class="panel">
+            <header class="panel-header"><div><span class="panel-kicker">PROJECTS</span><h3>Projects in the Analysis Window</h3><p>Select a row to scope every panel below to that project.</p></div></header>
+            <div class="table-scroll"><table class="compact-table project-table"><thead><tr><th>Project</th><th>Task Records</th><th>Tasks</th><th>Robots</th><th>Completed</th><th>Unsuccessful</th><th>Execution Time</th><th>Latest Record</th></tr></thead><tbody id="projectListBody"><tr><td colspan="8" class="empty-cell">Waiting for project data</td></tr></tbody></table></div>
+          </article>
+
+          <article class="panel">
+            <header class="panel-header"><div><span class="panel-kicker">TASKS</span><h3 id="projectTaskTitle">Tasks in Scope</h3><p>Select a task to narrow the robot breakdown, trend and records below.</p></div></header>
+            <div class="table-scroll"><table class="compact-table project-task-table"><thead><tr><th>Task</th><th>Project</th><th>Task Records</th><th>Robots</th><th>Completed</th><th>Unsuccessful</th><th>Open</th><th>Avg Execution</th><th>Latest Record</th></tr></thead><tbody id="projectTaskBody"><tr><td colspan="9" class="empty-cell">Waiting for task data</td></tr></tbody></table></div>
+          </article>
+
+          <div class="two-column-grid task-analysis-grid">
+            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">ROBOTS IN SCOPE</span><h3 id="projectRobotTitle">Robots Carrying This Work</h3><p>Identity resolves through MA_AMR.id, never the robot code.</p></div></header><div class="table-scroll"><table class="compact-table project-robot-table"><thead><tr><th>Robot</th><th>Task Records</th><th>Tasks</th><th>Completed</th><th>Unsuccessful</th><th>Avg Execution</th></tr></thead><tbody id="projectRobotBody"><tr><td colspan="6" class="empty-cell">Waiting for robot breakdown</td></tr></tbody></table></div></article>
+            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">OUTCOMES</span><h3>Recorded Outcomes</h3><p>The source records outcome status only; it holds no root-cause field.</p></div></header><div id="projectOutcomeChart" class="task-idle-cause-chart empty-state">Waiting for outcome data</div></article>
+          </div>
+
+          <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">HOURLY TREND</span><h3>Task Record Trend by Robot</h3><p id="projectTrendSubtitle">Queue records by hour within the selected project and task.</p></div></header><div id="projectTrendChart" class="chart-host"></div></article>
+
+          <article class="panel"><header class="panel-header"><div><span class="panel-kicker">EVIDENCE</span><h3>Latest Task Records</h3><p>The 100 most recent queue records in the selected scope.</p></div></header><div class="table-scroll"><table class="compact-table project-record-table"><thead><tr><th>Time</th><th>Project</th><th>Task</th><th>Robot</th><th>Outcome</th><th>Calling Box</th><th>Execution</th><th>Subjob Runs</th></tr></thead><tbody id="projectRecordBody"><tr><td colspan="8" class="empty-cell">Waiting for records</td></tr></tbody></table></div></article>
+        </section>
+
         <section class="view-panel" data-view-panel="operations" aria-labelledby="operationsHeading">
           <div class="section-intro"><div><span class="section-kicker">OPERATIONS</span><h2 id="operationsHeading">DWS Data Status</h2><p>Monitor DWS freshness. Current operating mode, position and task state are unavailable without the snapshot.</p></div></div>
           <div class="focus-strip">
@@ -248,6 +294,7 @@
           <details id="taskStateExceptionPanel" class="task-state-exception-panel" hidden><summary><span>State data exception details</span><small id="taskStateExceptionSummary">Latest affected robot-hours</small></summary><div class="table-scroll"><table class="task-state-exception-table"><thead><tr><th>Robot</th><th>Hour</th><th>Coverage finding</th><th>Battery / task evidence</th><th>Last battery event before hour</th></tr></thead><tbody id="taskStateExceptionBody"><tr><td colspan="5" class="empty-cell">Waiting for DWS state-exception data</td></tr></tbody></table></div></details>
           <article class="panel chart-panel task-usage-panel"><header class="panel-header"><div><span class="panel-kicker">HOURLY USAGE</span><h3>Execution Trend by Robot</h3><p id="taskUsageSubtitle">Task evidence is grouped by hour and selected robot.</p></div></header><div id="taskUsageChart" class="chart-host"></div></article>
           <div class="two-column-grid task-analysis-grid"><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">IDLE TIME</span><h3>Hourly Idle Time Trend</h3><p>Idle minutes by hour. Charging takes precedence over waiting.</p></div></header><div id="taskIdleTrendChart" class="chart-host"></div></article><article class="panel"><header class="panel-header"><div><span class="panel-kicker">IDLE TIME</span><h3>Idle Time Causes</h3><p>No task, waiting, and charging share of observed idle time.</p></div></header><div id="taskIdleCauseChart" class="task-idle-cause-chart empty-state">Waiting for DWS task data</div></article></div>
+          <div class="two-column-grid task-analysis-grid"><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">CALLING BOX</span><h3>Calling Box Trend by Hour</h3><p id="taskCallingBoxTrendSubtitle">Call count by hour. Series are the top Calling Boxes in the selected period.</p></div></header><div id="taskCallingBoxTrendChart" class="chart-host"></div></article><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">ASSIGNED TASKS</span><h3>Assigned Task Trend by Hour</h3><p id="taskAssignedTrendSubtitle">Assignment count by hour. Series are the top assigned tasks in the selected period.</p></div></header><div id="taskAssignedTrendChart" class="chart-host"></div></article></div>
           <div class="two-column-grid task-analysis-grid task-ranking-grid"><article class="panel"><header class="panel-header"><div><span class="panel-kicker">CALLING BOX</span><h3 id="taskCallingBoxTitle">Top 5 Calling Boxes</h3><p>All Calling Box-linked queues in complete DWS hours within the selected period.</p></div></header><div id="taskCallingBoxList" class="task-ranking-list empty-state">Waiting for Calling Box data</div></article><article class="panel"><header class="panel-header"><div><span class="panel-kicker">ASSIGNED TASKS</span><h3 id="taskAssignedTitle">Top 5 Assigned Tasks</h3><p>Assignment count in complete DWS hours; completed count shown for context.</p></div></header><div id="taskAssignedList" class="task-ranking-list empty-state">Waiting for assigned task data</div></article></div>
           <div class="legacy-task-layout">
           <div class="focus-strip four-column"><div><span>Task Success Rate</span><strong id="taskSuccessValue">--</strong><small>Completed / (completed + unsuccessful)</small></div><div><span>Recorded Failures</span><strong id="taskFailureValue">--</strong><small id="taskFailureSummary">Queue outcome status</small></div><div><span>Active Jobs</span><strong id="taskActiveValue">--</strong><small id="taskActiveIds">IDs: --</small></div><div><span>Root-Cause Field</span><strong class="compact-value">Not Available</strong><small>The source records outcome status only</small></div></div>
