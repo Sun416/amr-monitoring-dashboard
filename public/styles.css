@@ -257,6 +257,7 @@ button { cursor: pointer; }
 
 .section-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
 .section-intro.compact { margin: 0 0 16px; }
+.section-actions-row { display: flex; align-items: center; justify-content: flex-end; margin: 0 0 16px; }
 .section-kicker, .panel-kicker { display: block; color: var(--blue); font-size: 11px; font-weight: 750; letter-spacing: .14em; }
 .section-intro h2 { margin: 5px 0 4px; font-size: 24px; letter-spacing: -.02em; }
 .section-intro p, .panel-header p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
