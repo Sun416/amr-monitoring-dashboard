@@ -1027,14 +1027,22 @@ function renderTaskLabelTrend(host, rows, options = {}) {
     const line = svgElement('path', { d: buildMonotoneCurvePath(points), class: 'chart-line task-usage-line' });
     line.style.stroke = item.color;
     svg.append(line);
+
+    const hit = svgElement('path', { d: buildMonotoneCurvePath(points), class: 'chart-line-hit' });
+    hit.style.stroke = 'transparent';
+    hit.style.strokeWidth = '18';
+    hit.style.fill = 'none';
+    hit.style.pointerEvents = 'stroke';
+    hit.style.cursor = 'pointer';
+    hit.addEventListener('mousemove', (event) => moveTooltip(event, item));
+    hit.addEventListener('mouseleave', hideTooltip);
+    svg.append(hit);
+
     hourLabels.forEach((label, index) => {
       if (index % Math.max(1, Math.ceil(hourLabels.length / 18)) !== 0 && index !== hourLabels.length - 1) return;
       const point = svgElement('circle', { cx: x(index), cy: y(item.values.get(label) || 0), r: 2.2, class: 'chart-point' });
       point.style.stroke = item.color;
-      const title = svgElement('title');
-      const secondaryValue = item.secondary ? item.secondary.get(label) : null;
-      title.textContent = `${item.name} · ${formatShortTime(label)} · ${formatNumber(item.values.get(label) || 0)} ${options.unit || ''}${secondaryValue != null ? ` · ${formatNumber(secondaryValue)} completed` : ''}`.trim();
-      point.append(title);
+      point.style.pointerEvents = 'none';
       svg.append(point);
     });
   });
@@ -1053,7 +1061,36 @@ function renderTaskLabelTrend(host, rows, options = {}) {
     tick.textContent = formatShortTime(hourLabels[index]);
     svg.append(tick);
   });
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'chart-tooltip';
+  tooltip.hidden = true;
+  const tooltipText = (item, label) => {
+    const secondaryValue = item.secondary ? item.secondary.get(label) : null;
+    return `${item.name} · ${formatShortTime(label)} · ${formatNumber(item.values.get(label) || 0)} ${options.unit || ''}${secondaryValue != null ? ` · ${formatNumber(secondaryValue)} completed` : ''}`.trim();
+  };
+  const moveTooltip = (event, item) => {
+    const svgRect = svg.getBoundingClientRect();
+    const relativeX = event.clientX - svgRect.left;
+    const index = Math.min(
+      hourLabels.length - 1,
+      Math.max(0, Math.round((relativeX - margin.left) / plotWidth * (hourLabels.length - 1)))
+    );
+    tooltip.textContent = tooltipText(item, hourLabels[index]);
+    tooltip.hidden = false;
+    const hostRect = host.getBoundingClientRect();
+    let left = event.clientX - hostRect.left + 12;
+    let top = event.clientY - hostRect.top - 12;
+    if (left + tooltip.offsetWidth > hostRect.width - 8) {
+      left = event.clientX - hostRect.left - tooltip.offsetWidth - 12;
+    }
+    tooltip.style.left = `${Math.max(4, left)}px`;
+    tooltip.style.top = `${Math.max(4, top)}px`;
+  };
+  const hideTooltip = () => { tooltip.hidden = true; };
+
   host.append(svg);
+  host.append(tooltip);
 
   const legend = document.createElement('div');
   legend.className = 'task-chart-legend';
