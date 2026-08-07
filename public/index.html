@@ -240,10 +240,6 @@
         </section>
 
         <section class="view-panel active" data-view-panel="projects" aria-labelledby="projectsHeading">
-          <div class="section-actions-row">
-            <button class="download-button" type="button" data-export="project-analytics">Download CSV</button>
-          </div>
-
           <div class="task-analytics-controls project-filter-bar">
             <div class="multi-select project-multi-select">
               <span class="multi-select-caption">Projects</span>
@@ -261,6 +257,7 @@
               <div class="multi-select-menu" id="robotMenu" role="group" aria-label="Robot options" hidden></div>
             </div>
             <button id="projectClearFilter" class="button secondary compact-button" type="button">Clear</button>
+            <button class="download-button compact-button" type="button" data-export="project-analytics">Download CSV</button>
           </div>
 
           <article class="task-data-scope" id="projectDataScope" data-tone="neutral">Loading project and task data…</article>

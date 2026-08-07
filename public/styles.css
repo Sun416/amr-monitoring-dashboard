@@ -857,6 +857,7 @@ td small { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1
 
 /* Project and task view: project -> task -> robot drill-down. */
 .project-filter-bar { margin: 0 0 20px; justify-content: flex-start; }
+.project-filter-bar .download-button { margin-left: auto; }
 .project-table { min-width: 900px; }
 .project-task-table { min-width: 1020px; }
 .project-robot-table { min-width: 620px; }
