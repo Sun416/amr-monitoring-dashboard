@@ -964,6 +964,7 @@ function renderTaskLabelTrend(host, rows, options = {}) {
   host.replaceChildren();
   const labelKey = options.labelKey;
   const valueKey = options.valueKey;
+  const secondaryKey = options.secondaryKey;
   const scopedRows = rows.filter((row) => row.stat_hour && row[labelKey]);
   if (!scopedRows.length) {
     const empty = document.createElement('div');
@@ -975,11 +976,19 @@ function renderTaskLabelTrend(host, rows, options = {}) {
 
   const hourLabels = [...new Set(scopedRows.map((row) => row.stat_hour))].sort();
   const seriesMap = new Map();
+  const seriesSecondaryMap = new Map();
   scopedRows.forEach((row) => {
     const name = String(row[labelKey]);
-    if (!seriesMap.has(name)) seriesMap.set(name, new Map());
+    if (!seriesMap.has(name)) {
+      seriesMap.set(name, new Map());
+      seriesSecondaryMap.set(name, new Map());
+    }
     const bucket = seriesMap.get(name);
     bucket.set(row.stat_hour, (bucket.get(row.stat_hour) || 0) + asNumber(row[valueKey]));
+    if (secondaryKey) {
+      const secondary = seriesSecondaryMap.get(name);
+      secondary.set(row.stat_hour, (secondary.get(row.stat_hour) || 0) + asNumber(row[secondaryKey]));
+    }
   });
 
   const palette = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#db2777', '#0891b2'];
@@ -988,7 +997,12 @@ function renderTaskLabelTrend(host, rows, options = {}) {
       const total = (entry) => [...entry[1].values()].reduce((sum, value) => sum + value, 0);
       return total(b) - total(a);
     })
-    .map(([name, values], index) => ({ name, values, color: palette[index % palette.length] }));
+    .map(([name, values], index) => ({
+      name,
+      values,
+      secondary: seriesSecondaryMap.get(name),
+      color: palette[index % palette.length]
+    }));
 
   const max = Math.max(...series.flatMap((item) => hourLabels.map((label) => item.values.get(label) || 0)), 1);
   const width = 780;
@@ -1018,7 +1032,8 @@ function renderTaskLabelTrend(host, rows, options = {}) {
       const point = svgElement('circle', { cx: x(index), cy: y(item.values.get(label) || 0), r: 2.2, class: 'chart-point' });
       point.style.stroke = item.color;
       const title = svgElement('title');
-      title.textContent = `${item.name} · ${formatShortTime(label)}: ${formatNumber(item.values.get(label) || 0)} ${options.unit || ''}`.trim();
+      const secondaryValue = item.secondary ? item.secondary.get(label) : null;
+      title.textContent = `${item.name} · ${formatShortTime(label)} · ${formatNumber(item.values.get(label) || 0)} ${options.unit || ''}${secondaryValue != null ? ` · ${formatNumber(secondaryValue)} completed` : ''}`.trim();
       point.append(title);
       svg.append(point);
     });
@@ -1080,6 +1095,7 @@ function renderTaskVolumeCharts(data) {
   renderTaskLabelTrend(elements.taskAssignedTrendChart, assignedRows, {
     labelKey: 'task_label',
     valueKey: 'assigned_task_count',
+    secondaryKey: 'completed_task_count',
     unit: 'assignments',
     ariaLabel: 'Hourly assigned task count by label',
     emptyText: 'No assigned task records are available for the selected period and robot.'
@@ -1647,6 +1663,7 @@ function renderProjectAnalytics(data) {
   renderTaskLabelTrend(elements.projectTrendChart, data.hourlyTrend || [], {
     labelKey: 'robot_name',
     valueKey: 'queue_count',
+    secondaryKey: 'completed_count',
     unit: 'records',
     ariaLabel: 'Task record trend by robot',
     emptyText: 'No hourly task records are available for the selected project and task.'
