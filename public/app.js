@@ -782,6 +782,19 @@ function buildMonotoneCurvePath(points = []) {
   return path;
 }
 
+/*
+  Step-after path for hourly series. The value stays constant until the next
+  hour, so the chart never suggests data exists between two hourly samples.
+*/
+function buildStepPath(points = []) {
+  if (!points.length) return '';
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let index = 1; index < points.length; index += 1) {
+    path += ` H ${points[index].x} V ${points[index].y}`;
+  }
+  return path;
+}
+
 function renderTaskIdleTrend(host, rows = []) {
   if (!host) return;
   host.replaceChildren();
@@ -1052,11 +1065,12 @@ function renderTaskLabelTrend(host, rows, options = {}) {
 
   series.forEach((item) => {
     const points = hourLabels.map((label, index) => ({ x: x(index), y: y(item.values.get(label) || 0) }));
-    const line = svgElement('path', { d: buildMonotoneCurvePath(points), class: 'chart-line task-usage-line' });
+    const pathD = buildStepPath(points);
+    const line = svgElement('path', { d: pathD, class: 'chart-line task-usage-line' });
     line.style.stroke = item.color;
     svg.append(line);
 
-    const hit = svgElement('path', { d: buildMonotoneCurvePath(points), class: 'chart-line-hit' });
+    const hit = svgElement('path', { d: pathD, class: 'chart-line-hit' });
     hit.style.stroke = 'transparent';
     hit.style.strokeWidth = '18';
     hit.style.fill = 'none';
