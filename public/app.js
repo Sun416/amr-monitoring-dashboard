@@ -1205,7 +1205,7 @@ function renderProjectMultiMenu(menu, toggleText, options, selectedValues, onCha
   actions.className = 'multi-select-actions';
   const selectAll = document.createElement('button');
   selectAll.type = 'button';
-  selectAll.textContent = 'Select';
+  selectAll.textContent = 'Select all';
   selectAll.addEventListener('click', () => onChange([...values]));
   const clearAll = document.createElement('button');
   clearAll.type = 'button';
