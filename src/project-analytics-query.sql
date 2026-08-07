@@ -20,8 +20,60 @@ SET NOCOUNT ON;
 DECLARE @requested_start DATETIME2(0) = TRY_CONVERT(DATETIME2(0), REPLACE(@analysis_start_text, N'T', N' '));
 DECLARE @requested_end DATETIME2(0) = TRY_CONVERT(DATETIME2(0), REPLACE(@analysis_end_text, N'T', N' '));
 DECLARE @anchor DATETIME2(0);
-DECLARE @project_filter INT = TRY_CONVERT(INT, NULLIF(LTRIM(RTRIM(@project_id_text)), N''));
-DECLARE @job_filter INT = TRY_CONVERT(INT, NULLIF(LTRIM(RTRIM(@job_id_text)), N''));
+DECLARE @project_ids_text NVARCHAR(MAX) = NULLIF(LTRIM(RTRIM(@project_ids_text_param)), N'');
+DECLARE @job_ids_text NVARCHAR(MAX) = NULLIF(LTRIM(RTRIM(@job_ids_text_param)), N'');
+DECLARE @robot_codes_text NVARCHAR(MAX) = NULLIF(LTRIM(RTRIM(@robot_codes_text_param)), N'');
+
+DECLARE @selected_projects TABLE
+(
+    project_id INT NOT NULL PRIMARY KEY
+);
+
+DECLARE @selected_jobs TABLE
+(
+    job_id INT NOT NULL PRIMARY KEY
+);
+
+DECLARE @selected_robots TABLE
+(
+    robot_code NVARCHAR(100) NOT NULL PRIMARY KEY
+);
+
+DECLARE @projects_xml XML = TRY_CONVERT(XML,
+    CASE
+        WHEN @project_ids_text IS NULL THEN N'<items />'
+        ELSE N'<items><item>' + REPLACE(@project_ids_text, N',', N'</item><item>') + N'</item></items>'
+    END
+);
+
+DECLARE @jobs_xml XML = TRY_CONVERT(XML,
+    CASE
+        WHEN @job_ids_text IS NULL THEN N'<items />'
+        ELSE N'<items><item>' + REPLACE(@job_ids_text, N',', N'</item><item>') + N'</item></items>'
+    END
+);
+
+DECLARE @robots_xml XML = TRY_CONVERT(XML,
+    CASE
+        WHEN @robot_codes_text IS NULL THEN N'<items />'
+        ELSE N'<items><item>' + REPLACE(@robot_codes_text, N',', N'</item><item>') + N'</item></items>'
+    END
+);
+
+INSERT INTO @selected_projects (project_id)
+SELECT DISTINCT TRY_CONVERT(INT, LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)'))))
+FROM @projects_xml.nodes(N'/items/item') AS items(split)
+WHERE TRY_CONVERT(INT, LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)')))) IS NOT NULL;
+
+INSERT INTO @selected_jobs (job_id)
+SELECT DISTINCT TRY_CONVERT(INT, LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)'))))
+FROM @jobs_xml.nodes(N'/items/item') AS items(split)
+WHERE TRY_CONVERT(INT, LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)')))) IS NOT NULL;
+
+INSERT INTO @selected_robots (robot_code)
+SELECT DISTINCT LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)')))
+FROM @robots_xml.nodes(N'/items/item') AS items(split)
+WHERE LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)'))) <> N'';
 
 SELECT @anchor = DATEADD(HOUR, 1, MAX(queue_fact.[event_time]))
 FROM [DWD].[fact_amr_queue] AS queue_fact;
@@ -153,8 +205,9 @@ SELECT
     CONVERT(NVARCHAR(19), @requested_start, 120) AS [analysis_start],
     CONVERT(NVARCHAR(19), @requested_end, 120) AS [analysis_end],
     CONVERT(NVARCHAR(19), @anchor, 120) AS [source_anchor],
-    @project_filter AS [selected_project_id],
-    @job_filter AS [selected_job_id],
+    (SELECT COUNT(1) FROM @selected_projects) AS [selected_project_count],
+    (SELECT COUNT(1) FROM @selected_jobs) AS [selected_job_count],
+    (SELECT COUNT(1) FROM @selected_robots) AS [selected_robot_count],
     COUNT_BIG(1) AS [queue_count],
     COUNT(DISTINCT scoped.[project_id]) AS [project_count],
     COUNT(DISTINCT scoped.[job_id]) AS [task_count],
@@ -202,7 +255,11 @@ SELECT
     END AS [average_execution_seconds],
     CONVERT(NVARCHAR(19), MAX(scoped.[event_time]), 120) AS [latest_event_time]
 FROM @scoped_queue AS scoped
-WHERE (@project_filter IS NULL OR scoped.[project_id] = @project_filter)
+WHERE
+(
+    NOT EXISTS (SELECT 1 FROM @selected_projects)
+    OR EXISTS (SELECT 1 FROM @selected_projects AS selected_project WHERE selected_project.[project_id] = scoped.[project_id])
+)
 GROUP BY scoped.[project_id], scoped.[project_name], scoped.[job_id], scoped.[task_name]
 ORDER BY [queue_count] DESC, [task_name];
 
@@ -223,8 +280,21 @@ SELECT
     END AS [average_execution_seconds],
     CONVERT(NVARCHAR(19), MAX(scoped.[event_time]), 120) AS [latest_event_time]
 FROM @scoped_queue AS scoped
-WHERE (@project_filter IS NULL OR scoped.[project_id] = @project_filter)
-  AND (@job_filter IS NULL OR scoped.[job_id] = @job_filter)
+WHERE
+(
+    NOT EXISTS (SELECT 1 FROM @selected_projects)
+    OR EXISTS (SELECT 1 FROM @selected_projects AS selected_project WHERE selected_project.[project_id] = scoped.[project_id])
+)
+AND
+(
+    NOT EXISTS (SELECT 1 FROM @selected_jobs)
+    OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
+)
+AND
+(
+    NOT EXISTS (SELECT 1 FROM @selected_robots)
+    OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
+)
 GROUP BY scoped.[robot_master_id], scoped.[robot_name]
 ORDER BY [queue_count] DESC, [robot_name];
 
@@ -237,8 +307,21 @@ SELECT
     SUM(CASE WHEN scoped.[queue_status] IN (N'failed', N'cancelled', N'canceled') THEN 1 ELSE 0 END) AS [unsuccessful_count],
     SUM(scoped.[execution_seconds]) AS [execution_seconds]
 FROM @scoped_queue AS scoped
-WHERE (@project_filter IS NULL OR scoped.[project_id] = @project_filter)
-  AND (@job_filter IS NULL OR scoped.[job_id] = @job_filter)
+WHERE
+(
+    NOT EXISTS (SELECT 1 FROM @selected_projects)
+    OR EXISTS (SELECT 1 FROM @selected_projects AS selected_project WHERE selected_project.[project_id] = scoped.[project_id])
+)
+AND
+(
+    NOT EXISTS (SELECT 1 FROM @selected_jobs)
+    OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
+)
+AND
+(
+    NOT EXISTS (SELECT 1 FROM @selected_robots)
+    OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
+)
 GROUP BY scoped.[stat_hour], scoped.[robot_name]
 ORDER BY [stat_hour], [robot_name];
 
@@ -250,8 +333,21 @@ SELECT
     COUNT(DISTINCT scoped.[job_id]) AS [task_count],
     CONVERT(NVARCHAR(19), MAX(scoped.[event_time]), 120) AS [latest_event_time]
 FROM @scoped_queue AS scoped
-WHERE (@project_filter IS NULL OR scoped.[project_id] = @project_filter)
-  AND (@job_filter IS NULL OR scoped.[job_id] = @job_filter)
+WHERE
+(
+    NOT EXISTS (SELECT 1 FROM @selected_projects)
+    OR EXISTS (SELECT 1 FROM @selected_projects AS selected_project WHERE selected_project.[project_id] = scoped.[project_id])
+)
+AND
+(
+    NOT EXISTS (SELECT 1 FROM @selected_jobs)
+    OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
+)
+AND
+(
+    NOT EXISTS (SELECT 1 FROM @selected_robots)
+    OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
+)
 GROUP BY scoped.[queue_status]
 ORDER BY [queue_count] DESC;
 
@@ -268,6 +364,19 @@ SELECT TOP (100)
     scoped.[subjob_run_count],
     scoped.[subjob_success_count]
 FROM @scoped_queue AS scoped
-WHERE (@project_filter IS NULL OR scoped.[project_id] = @project_filter)
-  AND (@job_filter IS NULL OR scoped.[job_id] = @job_filter)
+WHERE
+(
+    NOT EXISTS (SELECT 1 FROM @selected_projects)
+    OR EXISTS (SELECT 1 FROM @selected_projects AS selected_project WHERE selected_project.[project_id] = scoped.[project_id])
+)
+AND
+(
+    NOT EXISTS (SELECT 1 FROM @selected_jobs)
+    OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
+)
+AND
+(
+    NOT EXISTS (SELECT 1 FROM @selected_robots)
+    OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
+)
 ORDER BY scoped.[event_time] DESC;

@@ -32,8 +32,9 @@ const state = {
     null means "no filter", so the view opens on the whole window.
   */
   projectAnalytics: null,
-  selectedProjectId: null,
-  selectedJobId: null,
+  selectedProjectIds: [],
+  selectedJobIds: [],
+  selectedRobotCodes: [],
   projectRequestId: 0
 };
 
@@ -82,8 +83,12 @@ const elements = Object.fromEntries(
     'taskUsageSubtitle', 'taskUsageChart', 'taskIdleTrendChart', 'taskIdleCauseChart',
     'taskCallingBoxTitle', 'taskCallingBoxList', 'taskAssignedTitle', 'taskAssignedList',
     'taskCallingBoxTrendChart', 'taskCallingBoxTrendSubtitle', 'taskAssignedTrendChart', 'taskAssignedTrendSubtitle',
-    'analysisProjectSelect', 'analysisTaskSelect', 'analysisClearFilter',
-    'projectSelect', 'projectTaskSelect', 'projectClearFilter', 'projectDataScope',
+    'analysisProjectToggle', 'analysisProjectToggleText', 'analysisProjectMenu',
+    'analysisTaskToggle', 'analysisTaskToggleText', 'analysisTaskMenu',
+    'analysisRobotToggle', 'analysisRobotToggleText', 'analysisRobotMenu', 'analysisClearFilter',
+    'projectToggle', 'projectToggleText', 'projectMenu',
+    'taskToggle', 'taskToggleText', 'taskMenu',
+    'robotToggle', 'robotToggleText', 'robotMenu', 'projectClearFilter', 'projectDataScope',
     'projectQueueValue', 'projectQueueDetail', 'projectCompletionValue', 'projectCompletionDetail',
     'projectExecutionValue', 'projectExecutionDetail', 'projectRobotValue', 'projectRobotIds',
     'projectListBody', 'projectTaskTitle', 'projectTaskBody', 'projectRobotTitle', 'projectRobotBody',
@@ -1137,10 +1142,11 @@ function renderTaskAnalytics(data) {
 /*
   Project and task view.
 
-  The whole view is driven by state.selectedProjectId / state.selectedJobId.
-  Every reload asks the server for the same scope, so the project table, task
-  table, robot breakdown, trend and record list can never disagree about which
-  queue records they describe.
+  The whole view is driven by the multi-select scope arrays
+  (selectedProjectIds / selectedJobIds / selectedRobotCodes). Every reload asks
+  the server for the same scope, so the project table, task table, robot
+  breakdown, trend and record list can never disagree about which queue records
+  they describe.
 */
 async function loadProjectAnalytics({ announce = false } = {}) {
   const requestId = ++state.projectRequestId;
@@ -1150,8 +1156,9 @@ async function loadProjectAnalytics({ announce = false } = {}) {
     params.set('start', analysisWindow.start);
     params.set('end', analysisWindow.end);
   }
-  if (state.selectedProjectId) params.set('projectId', state.selectedProjectId);
-  if (state.selectedJobId) params.set('jobId', state.selectedJobId);
+  if (state.selectedProjectIds.length) params.set('projects', state.selectedProjectIds.join(','));
+  if (state.selectedJobIds.length) params.set('jobs', state.selectedJobIds.join(','));
+  if (state.selectedRobotCodes.length) params.set('robots', state.selectedRobotCodes.join(','));
 
   if (elements.projectDataScope) elements.projectDataScope.textContent = 'Loading project and task data…';
   try {
@@ -1170,82 +1177,139 @@ async function loadProjectAnalytics({ announce = false } = {}) {
   }
 }
 
-function setProjectScope({ projectId, jobId }) {
-  state.selectedProjectId = projectId ? String(projectId) : null;
-  state.selectedJobId = jobId ? String(jobId) : null;
-  if (elements.projectSelect) elements.projectSelect.value = state.selectedProjectId || '';
-  if (elements.projectTaskSelect) elements.projectTaskSelect.value = state.selectedJobId || '';
-  if (elements.analysisProjectSelect) elements.analysisProjectSelect.value = state.selectedProjectId || '';
-  if (elements.analysisTaskSelect) elements.analysisTaskSelect.value = state.selectedJobId || '';
+function setProjectScope({ projectIds = [], jobIds = [], robotCodes = [] } = {}) {
+  state.selectedProjectIds = projectIds.map(String);
+  state.selectedJobIds = jobIds.map(String);
+  state.selectedRobotCodes = robotCodes.map(String);
+  if (state.projectAnalytics) populateProjectSelectors(state.projectAnalytics);
   loadProjectAnalytics();
 }
 
-function fillSelect(select, options, selectedValue) {
-  if (!select) return;
-  select.replaceChildren();
+function projectMultiLabel(values, allLabel) {
+  return values.length ? `${values.length} selected` : allLabel;
+}
+
+/*
+  Shared multi-select renderer for the Project & Task and Analysis Center
+  filter bars. Each option is a checkbox; "All" selects every available value
+  and "Clear" empties the selection.
+*/
+function renderProjectMultiMenu(menu, toggleText, options, selectedValues, onChange, allLabel) {
+  if (!menu) return;
+  menu.replaceChildren();
+  const values = options.map((option) => String(option.value));
+  const available = new Set(values);
+  const selected = selectedValues.filter((value) => available.has(value));
+
+  const actions = document.createElement('div');
+  actions.className = 'multi-select-actions';
+  const selectAll = document.createElement('button');
+  selectAll.type = 'button';
+  selectAll.textContent = 'Select';
+  selectAll.addEventListener('click', () => onChange([...values]));
+  const clearAll = document.createElement('button');
+  clearAll.type = 'button';
+  clearAll.textContent = 'Clear';
+  clearAll.addEventListener('click', () => onChange([]));
+  actions.append(selectAll, clearAll);
+  menu.append(actions);
+
   options.forEach((option) => {
-    const node = document.createElement('option');
-    node.value = option.value;
-    node.textContent = option.label;
-    select.append(node);
+    const label = document.createElement('label');
+    label.className = 'multi-select-option';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = String(option.value);
+    input.checked = selected.includes(String(option.value));
+    input.addEventListener('change', () => {
+      const next = new Set(selected);
+      if (input.checked) next.add(String(option.value));
+      else next.delete(String(option.value));
+      onChange(values.filter((value) => next.has(value)));
+    });
+    const text = document.createElement('span');
+    text.textContent = option.label;
+    label.append(input, text);
+    menu.append(label);
   });
-  select.value = selectedValue || '';
+
+  toggleText.textContent = projectMultiLabel(selected, allLabel);
+  toggleText.parentElement.title = selected.length ? selected.join(', ') : '';
 }
 
 function populateProjectSelectors(data) {
-  fillSelect(
-    elements.projectSelect,
-    [{ value: '', label: `All projects (${(data.projects || []).length})` }].concat(
-      (data.projects || [])
-        .filter((row) => row.project_id !== null && row.project_id !== undefined)
-        .map((row) => ({
-          value: String(row.project_id),
-          label: `${row.project_name} · ${formatNumber(row.queue_count)} records`
-        }))
-    ),
-    state.selectedProjectId
-  );
+  const projects = (data.projects || [])
+    .filter((row) => row.project_id !== null && row.project_id !== undefined)
+    .map((row) => ({
+      value: String(row.project_id),
+      label: `${row.project_name} · ${formatNumber(row.queue_count)} records`
+    }));
+  const tasks = (data.tasks || [])
+    .filter((row) => row.job_id !== null && row.job_id !== undefined)
+    .map((row) => ({
+      value: String(row.job_id),
+      label: `${row.task_name} · ${formatNumber(row.queue_count)} records`
+    }));
+  const robots = (data.robots || [])
+    .map((row) => ({
+      value: String(row.robot_name || '').trim(),
+      label: `${row.robot_name || 'Unmapped robot'} · ${formatNumber(row.queue_count)} records`
+    }))
+    .filter((row) => row.value !== '');
 
-  const tasks = (data.tasks || []).filter((row) => row.job_id !== null && row.job_id !== undefined);
-  /*
-    A task selected under one project does not exist under another. Drop the
-    selection rather than showing a filter the current data cannot support.
-  */
-  const available = new Set(tasks.map((row) => String(row.job_id)));
-  if (state.selectedJobId && !available.has(state.selectedJobId)) state.selectedJobId = null;
-  fillSelect(
-    elements.projectTaskSelect,
-    [{ value: '', label: `All tasks (${tasks.length})` }].concat(
-      tasks.map((row) => ({
-        value: String(row.job_id),
-        label: `${row.task_name} · ${formatNumber(row.queue_count)} records`
-      }))
-    ),
-    state.selectedJobId
-  );
+  const projectScope = {
+    projectIds: state.selectedProjectIds,
+    jobIds: state.selectedJobIds,
+    robotCodes: state.selectedRobotCodes
+  };
 
-  fillSelect(
-    elements.analysisProjectSelect,
-    [{ value: '', label: `All projects (${(data.projects || []).length})` }].concat(
-      (data.projects || [])
-        .filter((row) => row.project_id !== null && row.project_id !== undefined)
-        .map((row) => ({
-          value: String(row.project_id),
-          label: `${row.project_name} · ${formatNumber(row.queue_count)} records`
-        }))
-    ),
-    state.selectedProjectId
+  renderProjectMultiMenu(
+    elements.projectMenu,
+    elements.projectToggleText,
+    projects,
+    state.selectedProjectIds,
+    (values) => setProjectScope({ ...projectScope, projectIds: values }),
+    `All projects (${projects.length})`
   );
-
-  fillSelect(
-    elements.analysisTaskSelect,
-    [{ value: '', label: `All tasks (${tasks.length})` }].concat(
-      tasks.map((row) => ({
-        value: String(row.job_id),
-        label: `${row.task_name} · ${formatNumber(row.queue_count)} records`
-      }))
-    ),
-    state.selectedJobId
+  renderProjectMultiMenu(
+    elements.analysisProjectMenu,
+    elements.analysisProjectToggleText,
+    projects,
+    state.selectedProjectIds,
+    (values) => setProjectScope({ ...projectScope, projectIds: values }),
+    `All projects (${projects.length})`
+  );
+  renderProjectMultiMenu(
+    elements.taskMenu,
+    elements.taskToggleText,
+    tasks,
+    state.selectedJobIds,
+    (values) => setProjectScope({ ...projectScope, jobIds: values }),
+    `All tasks (${tasks.length})`
+  );
+  renderProjectMultiMenu(
+    elements.analysisTaskMenu,
+    elements.analysisTaskToggleText,
+    tasks,
+    state.selectedJobIds,
+    (values) => setProjectScope({ ...projectScope, jobIds: values }),
+    `All tasks (${tasks.length})`
+  );
+  renderProjectMultiMenu(
+    elements.robotMenu,
+    elements.robotToggleText,
+    robots,
+    state.selectedRobotCodes,
+    (values) => setProjectScope({ ...projectScope, robotCodes: values }),
+    `All robots (${robots.length})`
+  );
+  renderProjectMultiMenu(
+    elements.analysisRobotMenu,
+    elements.analysisRobotToggleText,
+    robots,
+    state.selectedRobotCodes,
+    (values) => setProjectScope({ ...projectScope, robotCodes: values }),
+    `All robots (${robots.length})`
   );
 }
 
@@ -1303,13 +1367,19 @@ function renderProjectList(rows = []) {
         formatTaskLocalDateTime(row.latest_event_time)
       ],
       {
-        active: projectId !== null && projectId === state.selectedProjectId,
+        active: projectId !== null && state.selectedProjectIds.includes(projectId),
         onActivate: projectId === null
           ? null
-          : () => setProjectScope({
-            projectId: projectId === state.selectedProjectId ? null : projectId,
-            jobId: null
-          })
+          : () => {
+            const next = new Set(state.selectedProjectIds);
+            if (next.has(projectId)) next.delete(projectId);
+            else next.add(projectId);
+            setProjectScope({
+              projectIds: [...next],
+              jobIds: state.selectedJobIds,
+              robotCodes: state.selectedRobotCodes
+            });
+          }
       }
     ));
   });
@@ -1340,14 +1410,24 @@ function renderProjectTasks(rows = []) {
         formatTaskLocalDateTime(row.latest_event_time)
       ],
       {
-        active: jobId !== null && jobId === state.selectedJobId,
+        active: jobId !== null && state.selectedJobIds.includes(jobId),
         onActivate: jobId === null
           ? null
-          : () => setProjectScope({
-            projectId: state.selectedProjectId
-              || (row.project_id === null || row.project_id === undefined ? null : String(row.project_id)),
-            jobId: jobId === state.selectedJobId ? null : jobId
-          })
+          : () => {
+            const nextJobs = new Set(state.selectedJobIds);
+            if (nextJobs.has(jobId)) nextJobs.delete(jobId);
+            else nextJobs.add(jobId);
+            const nextProjects = new Set(state.selectedProjectIds);
+            const rowProjectId = row.project_id === null || row.project_id === undefined
+              ? null
+              : String(row.project_id);
+            if (rowProjectId !== null && !nextProjects.size) nextProjects.add(rowProjectId);
+            setProjectScope({
+              projectIds: [...nextProjects],
+              jobIds: [...nextJobs],
+              robotCodes: state.selectedRobotCodes
+            });
+          }
       }
     ));
   });
@@ -1463,18 +1543,27 @@ function renderProjectAnalytics(data) {
     renderAnalysis(state.dashboard.analysis, state.dashboard.analysisReadiness, state.dashboard.robots);
   }
 
-  const projectLabel = state.selectedProjectId
-    ? (data.projects || []).find((row) => String(row.project_id) === state.selectedProjectId)?.project_name
-      || `Project ${state.selectedProjectId}`
-    : 'All projects';
-  const taskLabel = state.selectedJobId
-    ? (data.tasks || []).find((row) => String(row.job_id) === state.selectedJobId)?.task_name
-      || `Job ${state.selectedJobId}`
-    : 'All tasks';
+  const projectLabel = state.selectedProjectIds.length === 1
+    ? (data.projects || []).find((row) => String(row.project_id) === state.selectedProjectIds[0])?.project_name
+      || `Project ${state.selectedProjectIds[0]}`
+    : state.selectedProjectIds.length > 1
+      ? `${state.selectedProjectIds.length} projects`
+      : 'All projects';
+  const taskLabel = state.selectedJobIds.length === 1
+    ? (data.tasks || []).find((row) => String(row.job_id) === state.selectedJobIds[0])?.task_name
+      || `Job ${state.selectedJobIds[0]}`
+    : state.selectedJobIds.length > 1
+      ? `${state.selectedJobIds.length} tasks`
+      : 'All tasks';
+  const robotLabel = state.selectedRobotCodes.length === 1
+    ? state.selectedRobotCodes[0]
+    : state.selectedRobotCodes.length > 1
+      ? `${state.selectedRobotCodes.length} robots`
+      : 'All robots';
 
   if (elements.projectDataScope) {
     elements.projectDataScope.dataset.tone = 'neutral';
-    elements.projectDataScope.textContent = `${projectLabel} / ${taskLabel} · ${formatTaskLocalDateTime(summary.analysis_start)} to ${formatTaskLocalDateTime(summary.analysis_end)} · ${formatNumber(summary.queue_count)} records · ${formatNumber(summary.robot_count)} robots`;
+    elements.projectDataScope.textContent = `${projectLabel} / ${taskLabel} / ${robotLabel} · ${formatTaskLocalDateTime(summary.analysis_start)} to ${formatTaskLocalDateTime(summary.analysis_end)} · ${formatNumber(summary.queue_count)} records · ${formatNumber(summary.robot_count)} robots`;
   }
 
   /*
@@ -1513,12 +1602,12 @@ function renderProjectAnalytics(data) {
   }
 
   if (elements.projectTaskTitle) {
-    elements.projectTaskTitle.textContent = state.selectedProjectId ? `Tasks in ${projectLabel}` : 'Tasks in Scope';
+    elements.projectTaskTitle.textContent = state.selectedProjectIds.length ? `Tasks in ${projectLabel}` : 'Tasks in Scope';
   }
   if (elements.projectRobotTitle) {
-    elements.projectRobotTitle.textContent = state.selectedJobId
+    elements.projectRobotTitle.textContent = state.selectedJobIds.length
       ? `Robots Carrying ${taskLabel}`
-      : `Robots Carrying ${projectLabel}`;
+      : (state.selectedProjectIds.length ? `Robots in ${projectLabel}` : 'Robots in Scope');
   }
   if (elements.projectTrendSubtitle) {
     elements.projectTrendSubtitle.textContent = `${projectLabel} / ${taskLabel} · queue records by hour, one series per robot.`;
@@ -2131,18 +2220,36 @@ function projectScopeRobotNames() {
   return new Set(rows.map((row) => String(row.robot_name || '').trim()).filter(Boolean));
 }
 
+function projectScopeActiveAny() {
+  return state.selectedProjectIds.length > 0
+    || state.selectedJobIds.length > 0
+    || state.selectedRobotCodes.length > 0;
+}
+
 function scopedAnalysisRobots(robots = []) {
-  if (!state.selectedProjectId) return robots;
-  const names = projectScopeRobotNames();
-  if (!names.size) return [];
-  return robots.filter((robot) => (
-    names.has(String(robot.robot_code || '').trim())
-    || names.has(String(robot.robot_name || '').trim())
-  ));
+  if (!projectScopeActiveAny()) return robots;
+  const projectScope = state.selectedProjectIds.length > 0 || state.selectedJobIds.length > 0;
+  const robotSet = state.selectedRobotCodes.length ? new Set(state.selectedRobotCodes) : null;
+  let filtered = robots;
+  if (projectScope) {
+    const names = projectScopeRobotNames();
+    if (!names.size) return [];
+    filtered = filtered.filter((robot) => (
+      names.has(String(robot.robot_code || '').trim())
+      || names.has(String(robot.robot_name || '').trim())
+    ));
+  }
+  if (robotSet) {
+    filtered = filtered.filter((robot) => (
+      robotSet.has(String(robot.robot_code || '').trim())
+      || robotSet.has(String(robot.robot_name || '').trim())
+    ));
+  }
+  return filtered;
 }
 
 function scopedAnalysisDiagnostics(analysis, robots = []) {
-  if (!analysis || !state.selectedProjectId) return analysis;
+  if (!analysis || !projectScopeActiveAny()) return analysis;
   const masterIds = new Set(
     scopedAnalysisRobots(robots)
       .map((robot) => String(robot.master_robot_id))
@@ -2175,7 +2282,7 @@ function renderAnalysis(analysis, readiness = {}, robots = []) {
   const diagnosticGroups = groupedDiagnostics(diagnostics);
   const topDiagnosticGroup = diagnosticGroups[0];
   const reviewedRobotCount = new Set(diagnostics.map((diagnostic) => String(diagnostic.masterRobotId))).size;
-  const projectScopeActive = Boolean(state.selectedProjectId);
+  const projectScopeActive = projectScopeActiveAny();
 
   elements.analysisVerdict.dataset.severity = assessment.severity || 'INFO';
   elements.analysisHeadline.textContent = reviewedRobotCount
@@ -3441,7 +3548,16 @@ function renderMultiSelect(menuHost, toggle, toggleText, values, selected, allLa
 }
 
 function closeMultiSelectMenus(except) {
-  [[elements.wifiRobotToggle, elements.wifiRobotMenu], [elements.wifiPoiToggle, elements.wifiPoiMenu]]
+  [
+    [elements.wifiRobotToggle, elements.wifiRobotMenu],
+    [elements.wifiPoiToggle, elements.wifiPoiMenu],
+    [elements.projectToggle, elements.projectMenu],
+    [elements.taskToggle, elements.taskMenu],
+    [elements.robotToggle, elements.robotMenu],
+    [elements.analysisProjectToggle, elements.analysisProjectMenu],
+    [elements.analysisTaskToggle, elements.analysisTaskMenu],
+    [elements.analysisRobotToggle, elements.analysisRobotMenu]
+  ]
     .forEach(([toggle, menu]) => {
       if (!toggle || !menu || menu === except) return;
       menu.hidden = true;
@@ -4267,8 +4383,9 @@ function buildExportRows(dataset) {
         Latest_Record: row.latest_event_time,
         Analysis_Start: projectData.summary?.analysis_start,
         Analysis_End: projectData.summary?.analysis_end,
-        Selected_Project_ID: state.selectedProjectId || 'ALL',
-        Selected_Job_ID: state.selectedJobId || 'ALL',
+        Selected_Projects: state.selectedProjectIds.join(',') || 'ALL',
+        Selected_Jobs: state.selectedJobIds.join(',') || 'ALL',
+        Selected_Robots: state.selectedRobotCodes.join(',') || 'ALL',
         Identity_Rule: projectData.identityRule
       }));
     }
@@ -4682,32 +4799,17 @@ elements.wifiApplyWindow.addEventListener('click', () => {
 elements.taskApplyWindow.addEventListener('click', () => {
   loadTaskAnalytics({ announce: true });
 });
-if (elements.projectSelect) {
-  elements.projectSelect.addEventListener('change', () => {
-    // Changing the project invalidates any task chosen under the previous one.
-    setProjectScope({ projectId: elements.projectSelect.value, jobId: null });
-  });
-}
-if (elements.projectTaskSelect) {
-  elements.projectTaskSelect.addEventListener('change', () => {
-    setProjectScope({ projectId: state.selectedProjectId, jobId: elements.projectTaskSelect.value });
-  });
-}
+bindMultiSelectToggle(elements.projectToggle, elements.projectMenu);
+bindMultiSelectToggle(elements.taskToggle, elements.taskMenu);
+bindMultiSelectToggle(elements.robotToggle, elements.robotMenu);
+bindMultiSelectToggle(elements.analysisProjectToggle, elements.analysisProjectMenu);
+bindMultiSelectToggle(elements.analysisTaskToggle, elements.analysisTaskMenu);
+bindMultiSelectToggle(elements.analysisRobotToggle, elements.analysisRobotMenu);
 if (elements.projectClearFilter) {
-  elements.projectClearFilter.addEventListener('click', () => setProjectScope({ projectId: null, jobId: null }));
-}
-if (elements.analysisProjectSelect) {
-  elements.analysisProjectSelect.addEventListener('change', () => {
-    setProjectScope({ projectId: elements.analysisProjectSelect.value, jobId: null });
-  });
-}
-if (elements.analysisTaskSelect) {
-  elements.analysisTaskSelect.addEventListener('change', () => {
-    setProjectScope({ projectId: state.selectedProjectId, jobId: elements.analysisTaskSelect.value });
-  });
+  elements.projectClearFilter.addEventListener('click', () => setProjectScope({ projectIds: [], jobIds: [], robotCodes: [] }));
 }
 if (elements.analysisClearFilter) {
-  elements.analysisClearFilter.addEventListener('click', () => setProjectScope({ projectId: null, jobId: null }));
+  elements.analysisClearFilter.addEventListener('click', () => setProjectScope({ projectIds: [], jobIds: [], robotCodes: [] }));
 }
 elements.taskRobotToggle.addEventListener('click', () => {
   const opening = elements.taskRobotMenu.hidden;

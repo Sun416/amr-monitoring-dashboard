@@ -312,31 +312,46 @@ async function loadTaskAnalytics({ taskStart, taskEnd, robotCodes } = {}) {
   };
 }
 
-function normalizeOptionalId(value) {
-  const text = String(value === undefined || value === null ? '' : value).trim();
-  if (!text) return null;
-  const parsed = Number.parseInt(text, 10);
-  if (!Number.isSafeInteger(parsed) || String(parsed) !== text) {
-    const error = new Error('Project and task identifiers must be integers.');
-    error.code = 'INVALID_PROJECT_SCOPE';
-    error.statusCode = 400;
-    throw error;
-  }
-  return String(parsed);
+function normalizeOptionalIdList(value) {
+  if (value === undefined || value === null || value === '') return [];
+  const parts = Array.isArray(value) ? value : String(value).split(',');
+  const ids = [];
+  parts.forEach((part) => {
+    const text = String(part).trim();
+    if (!text) return;
+    const parsed = Number.parseInt(text, 10);
+    if (!Number.isSafeInteger(parsed) || String(parsed) !== text) {
+      const error = new Error('Project and task identifiers must be integers.');
+      error.code = 'INVALID_PROJECT_SCOPE';
+      error.statusCode = 400;
+      throw error;
+    }
+    ids.push(String(parsed));
+  });
+  return ids;
+}
+
+function normalizeRobotCodeList(value) {
+  if (value === undefined || value === null || value === '') return [];
+  const parts = Array.isArray(value) ? value : String(value).split(',');
+  return parts
+    .map((part) => String(part).trim())
+    .filter(Boolean);
 }
 
 /*
   Project and task first. The robot is a breakdown of the selected scope here,
   not the key the caller browses by.
 */
-async function loadProjectAnalytics({ start, end, projectId, jobId } = {}) {
+async function loadProjectAnalytics({ start, end, projectId, jobId, projectIds, jobIds, robotCodes } = {}) {
   const pool = await getPool();
   const request = pool.request();
   request.multiple = true;
   request.input('analysis_start_text', sql.NVarChar(23), String(start || '').trim() || null);
   request.input('analysis_end_text', sql.NVarChar(23), String(end || '').trim() || null);
-  request.input('project_id_text', sql.NVarChar(20), normalizeOptionalId(projectId));
-  request.input('job_id_text', sql.NVarChar(20), normalizeOptionalId(jobId));
+  request.input('project_ids_text_param', sql.NVarChar(sql.MAX), normalizeOptionalIdList(projectIds ?? projectId).join(',') || null);
+  request.input('job_ids_text_param', sql.NVarChar(sql.MAX), normalizeOptionalIdList(jobIds ?? jobId).join(',') || null);
+  request.input('robot_codes_text_param', sql.NVarChar(sql.MAX), normalizeRobotCodeList(robotCodes).join(',') || null);
 
   const result = await request.query(projectAnalyticsQuery);
   const sets = result.recordsets || [];

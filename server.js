@@ -71,7 +71,10 @@ app.get('/api/project-analytics', async (request, response, next) => {
       start: request.query.start,
       end: request.query.end,
       projectId: request.query.projectId,
-      jobId: request.query.jobId
+      jobId: request.query.jobId,
+      projectIds: request.query.projects,
+      jobIds: request.query.jobs,
+      robotCodes: request.query.robots
     });
     response.json(projectAnalytics);
   } catch (error) {

@@ -98,8 +98,21 @@
           </div>
 
           <div class="task-analytics-controls project-filter-bar" aria-label="Analysis Center project scope">
-            <label><span>Project</span><select id="analysisProjectSelect" aria-label="Scope Analysis Center by project"><option value="">All projects</option></select></label>
-            <label><span>Task</span><select id="analysisTaskSelect" aria-label="Scope Analysis Center by task"><option value="">All tasks</option></select></label>
+            <div class="multi-select project-multi-select">
+              <span class="multi-select-caption">Projects</span>
+              <button type="button" class="multi-select-toggle" id="analysisProjectToggle" aria-expanded="false" aria-haspopup="true" aria-label="Scope Analysis Center by project"><span id="analysisProjectToggleText">All projects</span></button>
+              <div class="multi-select-menu" id="analysisProjectMenu" role="group" aria-label="Analysis project options" hidden></div>
+            </div>
+            <div class="multi-select project-multi-select">
+              <span class="multi-select-caption">Tasks</span>
+              <button type="button" class="multi-select-toggle" id="analysisTaskToggle" aria-expanded="false" aria-haspopup="true" aria-label="Scope Analysis Center by task"><span id="analysisTaskToggleText">All tasks</span></button>
+              <div class="multi-select-menu" id="analysisTaskMenu" role="group" aria-label="Analysis task options" hidden></div>
+            </div>
+            <div class="multi-select project-multi-select">
+              <span class="multi-select-caption">Robots</span>
+              <button type="button" class="multi-select-toggle" id="analysisRobotToggle" aria-expanded="false" aria-haspopup="true" aria-label="Scope Analysis Center by robot"><span id="analysisRobotToggleText">All robots</span></button>
+              <div class="multi-select-menu" id="analysisRobotMenu" role="group" aria-label="Analysis robot options" hidden></div>
+            </div>
             <button id="analysisClearFilter" class="button secondary compact-button" type="button">Clear</button>
           </div>
 
@@ -232,8 +245,21 @@
           </div>
 
           <div class="task-analytics-controls project-filter-bar">
-            <label><span>Project</span><select id="projectSelect" aria-label="Select project"><option value="">All projects</option></select></label>
-            <label><span>Task</span><select id="projectTaskSelect" aria-label="Select task"><option value="">All tasks</option></select></label>
+            <div class="multi-select project-multi-select">
+              <span class="multi-select-caption">Projects</span>
+              <button type="button" class="multi-select-toggle" id="projectToggle" aria-expanded="false" aria-haspopup="true" aria-label="Filter projects"><span id="projectToggleText">All projects</span></button>
+              <div class="multi-select-menu" id="projectMenu" role="group" aria-label="Project options" hidden></div>
+            </div>
+            <div class="multi-select project-multi-select">
+              <span class="multi-select-caption">Tasks</span>
+              <button type="button" class="multi-select-toggle" id="taskToggle" aria-expanded="false" aria-haspopup="true" aria-label="Filter tasks"><span id="taskToggleText">All tasks</span></button>
+              <div class="multi-select-menu" id="taskMenu" role="group" aria-label="Task options" hidden></div>
+            </div>
+            <div class="multi-select project-multi-select">
+              <span class="multi-select-caption">Robots</span>
+              <button type="button" class="multi-select-toggle" id="robotToggle" aria-expanded="false" aria-haspopup="true" aria-label="Filter robots"><span id="robotToggleText">All robots</span></button>
+              <div class="multi-select-menu" id="robotMenu" role="group" aria-label="Robot options" hidden></div>
+            </div>
             <button id="projectClearFilter" class="button secondary compact-button" type="button">Clear</button>
           </div>
 
