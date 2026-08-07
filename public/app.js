@@ -1022,6 +1022,33 @@ function renderTaskLabelTrend(host, rows, options = {}) {
     svg.append(axis);
   });
 
+  const tooltip = document.createElement('div');
+  tooltip.className = 'chart-tooltip';
+  tooltip.hidden = true;
+  const tooltipText = (item, label) => {
+    const secondaryValue = item.secondary ? item.secondary.get(label) : null;
+    return `${item.name} · ${formatShortTime(label)} · ${formatNumber(item.values.get(label) || 0)} ${options.unit || ''}${secondaryValue != null ? ` · ${formatNumber(secondaryValue)} completed` : ''}`.trim();
+  };
+  const moveTooltip = (event, item) => {
+    const svgRect = svg.getBoundingClientRect();
+    const relativeX = event.clientX - svgRect.left;
+    const index = Math.min(
+      hourLabels.length - 1,
+      Math.max(0, Math.round((relativeX - margin.left) / plotWidth * (hourLabels.length - 1)))
+    );
+    tooltip.textContent = tooltipText(item, hourLabels[index]);
+    tooltip.hidden = false;
+    const hostRect = host.getBoundingClientRect();
+    let left = event.clientX - hostRect.left + 12;
+    let top = event.clientY - hostRect.top - 12;
+    if (left + tooltip.offsetWidth > hostRect.width - 8) {
+      left = event.clientX - hostRect.left - tooltip.offsetWidth - 12;
+    }
+    tooltip.style.left = `${Math.max(4, left)}px`;
+    tooltip.style.top = `${Math.max(4, top)}px`;
+  };
+  const hideTooltip = () => { tooltip.hidden = true; };
+
   series.forEach((item) => {
     const points = hourLabels.map((label, index) => ({ x: x(index), y: y(item.values.get(label) || 0) }));
     const line = svgElement('path', { d: buildMonotoneCurvePath(points), class: 'chart-line task-usage-line' });
@@ -1061,33 +1088,6 @@ function renderTaskLabelTrend(host, rows, options = {}) {
     tick.textContent = formatShortTime(hourLabels[index]);
     svg.append(tick);
   });
-
-  const tooltip = document.createElement('div');
-  tooltip.className = 'chart-tooltip';
-  tooltip.hidden = true;
-  const tooltipText = (item, label) => {
-    const secondaryValue = item.secondary ? item.secondary.get(label) : null;
-    return `${item.name} · ${formatShortTime(label)} · ${formatNumber(item.values.get(label) || 0)} ${options.unit || ''}${secondaryValue != null ? ` · ${formatNumber(secondaryValue)} completed` : ''}`.trim();
-  };
-  const moveTooltip = (event, item) => {
-    const svgRect = svg.getBoundingClientRect();
-    const relativeX = event.clientX - svgRect.left;
-    const index = Math.min(
-      hourLabels.length - 1,
-      Math.max(0, Math.round((relativeX - margin.left) / plotWidth * (hourLabels.length - 1)))
-    );
-    tooltip.textContent = tooltipText(item, hourLabels[index]);
-    tooltip.hidden = false;
-    const hostRect = host.getBoundingClientRect();
-    let left = event.clientX - hostRect.left + 12;
-    let top = event.clientY - hostRect.top - 12;
-    if (left + tooltip.offsetWidth > hostRect.width - 8) {
-      left = event.clientX - hostRect.left - tooltip.offsetWidth - 12;
-    }
-    tooltip.style.left = `${Math.max(4, left)}px`;
-    tooltip.style.top = `${Math.max(4, top)}px`;
-  };
-  const hideTooltip = () => { tooltip.hidden = true; };
 
   host.append(svg);
   host.append(tooltip);
