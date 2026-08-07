@@ -61,7 +61,7 @@
       <div class="sidebar-status">
         <div class="status-heading"><span class="status-dot" id="freshnessDot"></span><strong>Data Connection</strong></div>
         <p id="connectionStatus">Connecting to DWS...</p>
-        <div><span>Analysis Window</span><strong id="analysisWindowLabel">Last 1 day</strong></div>
+        <div><span>Analysis Window</span><strong id="analysisWindowLabel">Last 24 hours</strong></div>
       </div>
     </aside>
 
@@ -83,6 +83,7 @@
             <label><span>Start</span><input id="wifiStartTime" type="datetime-local" step="1" aria-label="Exact analysis start time"></label>
             <label><span>End</span><input id="wifiEndTime" type="datetime-local" step="1" aria-label="Exact analysis end time"></label>
             <button id="wifiApplyWindow" class="button secondary compact-button" type="button">Apply</button>
+            <button id="windowClearButton" class="button secondary compact-button" type="button">Clear</button>
           </div>
           <button class="button secondary" id="refreshButton" type="button">Refresh</button>
           <button class="button secondary" id="syncButton" type="button">Reload DWS</button>

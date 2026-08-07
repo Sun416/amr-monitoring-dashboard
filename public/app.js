@@ -21,8 +21,8 @@ const state = {
   loading: false,
   currentView: 'overview',
   robotType: 'ALL',
-  window: { key: 'd1', label: 'Last 1 day', hours: 24, days: 1 },
-  wifiWindow: { isCustom: false, start: null, end: null },
+  window: { key: 'd1', label: 'Last 24 hours', hours: 24, days: 1 },
+  analysisWindow: { isCustom: false, start: null, end: null },
   taskAnalytics: null,
   taskRobots: [],
   taskTopLimit: 5,
@@ -55,7 +55,7 @@ const elements = Object.fromEntries(
   [
     'sidebar', 'sidebarOverlay', 'sidebarToggle', 'viewEyebrow', 'viewTitle', 'viewDescription',
     'currentDate', 'currentTime', 'freshnessDot', 'connectionStatus', 'sourceFreshness', 'sourceLag', 'dwsFreshness', 'wifiFreshness',
-    'analysisWindowLabel', 'refreshButton', 'syncButton', 'exportAllButton', 'metricTotal', 'metricTotalScope', 'metricOnline',
+    'analysisWindowLabel', 'windowClearButton', 'refreshButton', 'syncButton', 'exportAllButton', 'metricTotal', 'metricTotalScope', 'metricOnline',
     'metricOffline', 'metricJobs', 'metricJobScope', 'metricBattery', 'metricLowBattery', 'metricRssi', 'metricWifiCoverage',
     'metricZeroSignal', 'metricZeroSignalScope', 'metricAlarms', 'metricAlarmScope', 'metricTaskSuccess', 'metricTaskSuccessScope',
     'analysisVerdict', 'analysisHeadline', 'analysisSummary', 'analysisConfidence', 'analysisRuleVersion',
@@ -416,20 +416,31 @@ function selectedWindow() {
   return { ...state.window };
 }
 
-function selectedWifiAnalysisWindow() {
-  return state.wifiWindow.isCustom
-    ? {
-      isCustom: true,
-      start: state.wifiWindow.start,
-      end: state.wifiWindow.end
-    }
-    : { isCustom: false, start: null, end: null };
+function selectedAnalysisWindow() {
+  if (!state.analysisWindow.isCustom) {
+    return { isCustom: false, start: null, end: null, hours: 24 };
+  }
+  const start = new Date(String(state.analysisWindow.start).replace('T', ' '));
+  const end = new Date(String(state.analysisWindow.end).replace('T', ' '));
+  const durationHours = Number.isFinite(start.getTime()) && Number.isFinite(end.getTime())
+    ? Math.ceil((end.getTime() - start.getTime()) / 3600000)
+    : 24;
+  return {
+    isCustom: true,
+    start: state.analysisWindow.start,
+    end: state.analysisWindow.end,
+    hours: Math.max(1, durationHours)
+  };
 }
 
 function wifiRefreshLabel(wifiWindow) {
-  if (!wifiWindow.isCustom) return state.window.label;
+  if (!wifiWindow.isCustom) return 'Last 24 hours';
   const format = (value) => String(value || '').replace('T', ' ').slice(0, 16);
   return `Exact ${format(wifiWindow.start)} – ${format(wifiWindow.end)}`;
+}
+
+function analysisWindowLabelText() {
+  return wifiRefreshLabel(selectedAnalysisWindow());
 }
 
 function selectedRobotType() {
@@ -487,19 +498,19 @@ async function loadDashboard({ announce = false } = {}) {
   try {
     state.window = selectedWindow();
     state.robotType = selectedRobotType();
-    const wifiWindow = selectedWifiAnalysisWindow();
+    const analysisWindow = selectedAnalysisWindow();
     const params = new URLSearchParams({
-      hours: state.window.hours,
+      hours: analysisWindow.hours,
       days: state.window.days,
       robotType: state.robotType
     });
-    if (wifiWindow.isCustom) {
-      params.set('wifiStart', wifiWindow.start);
-      params.set('wifiEnd', wifiWindow.end);
+    if (analysisWindow.isCustom) {
+      params.set('wifiStart', analysisWindow.start);
+      params.set('wifiEnd', analysisWindow.end);
     }
     state.dashboard = await requestJson(`/api/dashboard?${params}`);
     renderDashboard(state.dashboard);
-    if (announce) showToast(`Refreshed: ${robotTypeLabel()} · ${wifiRefreshLabel(wifiWindow)}`);
+    if (announce) showToast(`Refreshed: ${robotTypeLabel()} · ${wifiRefreshLabel(analysisWindow)}`);
   } catch (error) {
     renderConnectionError(error);
     showToast(error.message, 'error');
@@ -538,7 +549,7 @@ function taskWindowLabel(summary = {}) {
 
 async function loadTaskAnalytics({ announce = false } = {}) {
   const requestId = ++state.taskRequestId;
-  const analysisWindow = selectedWifiAnalysisWindow();
+  const analysisWindow = selectedAnalysisWindow();
   const start = analysisWindow.start || '';
   const end = analysisWindow.end || '';
   const params = new URLSearchParams();
@@ -1151,7 +1162,7 @@ function renderTaskAnalytics(data) {
 */
 async function loadProjectAnalytics({ announce = false } = {}) {
   const requestId = ++state.projectRequestId;
-  const analysisWindow = selectedWifiAnalysisWindow();
+  const analysisWindow = selectedAnalysisWindow();
   const params = new URLSearchParams();
   if (analysisWindow.start && analysisWindow.end) {
     params.set('start', analysisWindow.start);
@@ -1809,7 +1820,7 @@ function renderDashboard(data) {
   elements.alarmNoSignalIds.textContent = robotIdSummary(robots, isNoSignal);
   elements.alarmRssiIssueValue.textContent = `${formatNumber(rssiMeasurementIssueRobots.length)} robots`;
   elements.alarmRssiIssueIds.textContent = robotIdSummary(robots, hasRssiMeasurementIssue);
-  elements.analysisWindowLabel.textContent = `${robotTypeLabel()} · ${state.window.label}`;
+  elements.analysisWindowLabel.textContent = `${robotTypeLabel()} · ${analysisWindowLabelText()}`;
   elements.batteryTrendAnchor.textContent = summary.battery_trend_anchor_time
     ? `Through ${formatShortTime(summary.battery_trend_anchor_time)}`
     : '%';
@@ -4788,15 +4799,27 @@ elements.wifiApplyWindow.addEventListener('click', () => {
     showToast('Choose both exact analysis start and end times', 'error');
     return;
   }
-  state.wifiWindow = { isCustom: true, start, end };
+  state.analysisWindow = { isCustom: true, start, end };
   state.selectedWifiRobot = 'ALL';
   state.selectedWifiPoi = 'ALL';
   state.selectedWifiRobots = [];
   state.selectedWifiPois = [];
+  elements.analysisWindowLabel.textContent = `${robotTypeLabel()} · ${analysisWindowLabelText()}`;
   loadDashboard({ announce: true });
   loadTaskAnalytics();
   loadProjectAnalytics();
 });
+if (elements.windowClearButton) {
+  elements.windowClearButton.addEventListener('click', () => {
+    state.analysisWindow = { isCustom: false, start: null, end: null };
+    if (elements.wifiStartTime) elements.wifiStartTime.value = '';
+    if (elements.wifiEndTime) elements.wifiEndTime.value = '';
+    elements.analysisWindowLabel.textContent = `${robotTypeLabel()} · ${analysisWindowLabelText()}`;
+    loadDashboard({ announce: true });
+    loadTaskAnalytics();
+    loadProjectAnalytics();
+  });
+}
 elements.taskApplyWindow.addEventListener('click', () => {
   loadTaskAnalytics({ announce: true });
 });

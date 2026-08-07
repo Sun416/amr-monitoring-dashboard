@@ -75,13 +75,13 @@ SELECT DISTINCT LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)')))
 FROM @robots_xml.nodes(N'/items/item') AS items(split)
 WHERE LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)'))) <> N'';
 
-SELECT @anchor = DATEADD(HOUR, 1, MAX(queue_fact.[event_time]))
-FROM [DWD].[fact_amr_queue] AS queue_fact;
+SELECT @anchor = DATEADD(HOUR, 1, MAX(queue_fact.[stat_hour]))
+FROM [DWS].[dws_robot_task_hourly] AS queue_fact;
 
 IF @requested_start IS NULL AND @requested_end IS NULL
 BEGIN
     SET @requested_end = ISNULL(@anchor, CAST(SYSDATETIME() AS DATETIME2(0)));
-    SET @requested_start = DATEADD(DAY, -7, @requested_end);
+    SET @requested_start = DATEADD(HOUR, -24, @requested_end);
 END;
 
 IF @requested_start IS NULL OR @requested_end IS NULL OR @requested_end <= @requested_start
@@ -389,6 +389,18 @@ ORDER BY scoped.[event_time] DESC;
     "how the robots of this project spent their non-executing time", never a
     project-level aggregate that the telemetry schema cannot support.
 */
+DECLARE @idle_start DATETIME2(0) = DATEADD
+(
+    HOUR,
+    DATEDIFF(HOUR, 0, @requested_start)
+        + CASE
+            WHEN @requested_start > DATEADD(HOUR, DATEDIFF(HOUR, 0, @requested_start), 0) THEN 1
+            ELSE 0
+          END,
+    0
+);
+DECLARE @idle_end DATETIME2(0) = DATEADD(HOUR, DATEDIFF(HOUR, 0, @requested_end), 0);
+
 SELECT
     SUM(h.[no_task_seconds]) AS [no_task_seconds],
     SUM(h.[waiting_seconds]) AS [waiting_seconds],
@@ -396,8 +408,8 @@ SELECT
     SUM(h.[executing_seconds]) AS [executing_seconds],
     COUNT(DISTINCT h.[robot_code]) AS [robot_count]
 FROM [DWS].[dws_robot_task_hourly] AS h
-WHERE h.[stat_hour] >= @requested_start
-  AND h.[stat_hour] < @requested_end
+WHERE h.[stat_hour] >= @idle_start
+  AND h.[stat_hour] < @idle_end
   AND EXISTS
   (
       SELECT 1
