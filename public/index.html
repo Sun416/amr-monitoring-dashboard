@@ -227,7 +227,7 @@
 
         <section class="view-panel active" data-view-panel="projects" aria-labelledby="projectsHeading">
           <div class="section-intro">
-            <div><span class="section-kicker">PROJECT &amp; TASK</span><h2 id="projectsHeading">Project and Task Analysis</h2><p>Pick a project, then a task, to see how that work ran and which robots carried it. Robots are a breakdown of the selected scope, not the entry point.</p></div>
+            <div><span class="section-kicker">PROJECT &amp; TASK</span><h2 id="projectsHeading">Project and Task Analysis</h2><p>Pick a project to see how it ran and which robots carried it.</p></div>
             <button class="download-button" type="button" data-export="project-analytics">Download CSV</button>
           </div>
 
@@ -246,26 +246,48 @@
             <div><span>Robots Involved</span><strong id="projectRobotValue">--</strong><small id="projectRobotIds">--</small></div>
           </div>
 
-          <article class="panel">
-            <header class="panel-header"><div><span class="panel-kicker">PROJECTS</span><h3>Projects in the Analysis Window</h3><p>Select a row to scope every panel below to that project.</p></div></header>
-            <div id="projectListChart" class="project-chart-bars empty-state">Waiting for project data</div>
-            <div class="table-scroll"><table class="compact-table project-table"><thead><tr><th>Project</th><th>Task Records</th><th>Tasks</th><th>Robots</th><th>Completed</th><th>Unsuccessful</th><th>Execution Time</th><th>Latest Record</th></tr></thead><tbody id="projectListBody"><tr><td colspan="8" class="empty-cell">Waiting for project data</td></tr></tbody></table></div>
-          </article>
-
-          <article class="panel">
-            <header class="panel-header"><div><span class="panel-kicker">TASKS</span><h3 id="projectTaskTitle">Tasks in Scope</h3><p>Select a task to narrow the robot breakdown, trend and records below.</p></div></header>
-            <div id="projectTaskChart" class="project-chart-bars empty-state">Waiting for task data</div>
-            <div class="table-scroll"><table class="compact-table project-task-table"><thead><tr><th>Task</th><th>Project</th><th>Task Records</th><th>Robots</th><th>Completed</th><th>Unsuccessful</th><th>Open</th><th>Avg Execution</th><th>Latest Record</th></tr></thead><tbody id="projectTaskBody"><tr><td colspan="9" class="empty-cell">Waiting for task data</td></tr></tbody></table></div>
-          </article>
-
-          <div class="two-column-grid task-analysis-grid">
-            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">ROBOTS IN SCOPE</span><h3 id="projectRobotTitle">Robots Carrying This Work</h3><p>Identity resolves through MA_AMR.id, never the robot code.</p></div></header><div id="projectRobotChart" class="project-chart-bars empty-state">Waiting for robot breakdown</div><div class="table-scroll"><table class="compact-table project-robot-table"><thead><tr><th>Robot</th><th>Task Records</th><th>Tasks</th><th>Completed</th><th>Unsuccessful</th><th>Avg Execution</th></tr></thead><tbody id="projectRobotBody"><tr><td colspan="6" class="empty-cell">Waiting for robot breakdown</td></tr></tbody></table></div></article>
-            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">OUTCOMES</span><h3>Recorded Outcomes</h3><p>The source records outcome status only; it holds no root-cause field.</p></div></header><div id="projectOutcomeChart" class="task-idle-cause-chart empty-state">Waiting for outcome data</div></article>
+          <div class="project-dashboard-grid">
+            <article class="panel chart-panel project-trend-panel">
+              <header class="panel-header"><div><span class="panel-kicker">TREND</span><h3>Task Records by Hour</h3></div></header>
+              <div id="projectTrendChart" class="chart-host"></div>
+            </article>
+            <article class="panel chart-panel project-outcome-panel">
+              <header class="panel-header"><div><span class="panel-kicker">OUTCOMES</span><h3>Completed vs Unfinished</h3></div></header>
+              <div id="projectOutcomeChart" class="task-idle-cause-chart empty-state">Waiting for outcome data</div>
+            </article>
           </div>
 
-          <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">HOURLY TREND</span><h3>Task Record Trend by Robot</h3><p id="projectTrendSubtitle">Queue records by hour within the selected project and task.</p></div></header><div id="projectTrendChart" class="chart-host"></div></article>
+          <div class="project-dashboard-grid three">
+            <article class="panel chart-panel">
+              <header class="panel-header"><div><span class="panel-kicker">PROJECTS</span><h3>Records by Project</h3></div></header>
+              <div id="projectListChart" class="project-chart-bars empty-state">Waiting for project data</div>
+              <details class="detail-collapse">
+                <summary>Project table</summary>
+                <div class="table-scroll"><table class="compact-table project-table"><thead><tr><th>Project</th><th>Task Records</th><th>Tasks</th><th>Robots</th><th>Completed</th><th>Unsuccessful</th><th>Execution Time</th><th>Latest Record</th></tr></thead><tbody id="projectListBody"><tr><td colspan="8" class="empty-cell">Waiting for project data</td></tr></tbody></table></div>
+              </details>
+            </article>
+            <article class="panel chart-panel">
+              <header class="panel-header"><div><span class="panel-kicker">TASKS</span><h3 id="projectTaskTitle">Records by Task</h3></div></header>
+              <div id="projectTaskChart" class="project-chart-bars empty-state">Waiting for task data</div>
+              <details class="detail-collapse">
+                <summary>Task table</summary>
+                <div class="table-scroll"><table class="compact-table project-task-table"><thead><tr><th>Task</th><th>Project</th><th>Task Records</th><th>Robots</th><th>Completed</th><th>Unsuccessful</th><th>Open</th><th>Avg Execution</th><th>Latest Record</th></tr></thead><tbody id="projectTaskBody"><tr><td colspan="9" class="empty-cell">Waiting for task data</td></tr></tbody></table></div>
+              </details>
+            </article>
+            <article class="panel chart-panel">
+              <header class="panel-header"><div><span class="panel-kicker">ROBOTS</span><h3 id="projectRobotTitle">Records by Robot</h3></div></header>
+              <div id="projectRobotChart" class="project-chart-bars empty-state">Waiting for robot breakdown</div>
+              <details class="detail-collapse">
+                <summary>Robot table</summary>
+                <div class="table-scroll"><table class="compact-table project-robot-table"><thead><tr><th>Robot</th><th>Task Records</th><th>Tasks</th><th>Completed</th><th>Unsuccessful</th><th>Avg Execution</th></tr></thead><tbody id="projectRobotBody"><tr><td colspan="6" class="empty-cell">Waiting for robot breakdown</td></tr></tbody></table></div>
+              </details>
+            </article>
+          </div>
 
-          <article class="panel"><header class="panel-header"><div><span class="panel-kicker">EVIDENCE</span><h3>Latest Task Records</h3><p>The 100 most recent queue records in the selected scope.</p></div></header><div class="table-scroll"><table class="compact-table project-record-table"><thead><tr><th>Time</th><th>Project</th><th>Task</th><th>Robot</th><th>Outcome</th><th>Calling Box</th><th>Execution</th><th>Subjob Runs</th></tr></thead><tbody id="projectRecordBody"><tr><td colspan="8" class="empty-cell">Waiting for records</td></tr></tbody></table></div></article>
+          <details class="detail-collapse evidence-collapse">
+            <summary>Latest task records</summary>
+            <div class="table-scroll"><table class="compact-table project-record-table"><thead><tr><th>Time</th><th>Project</th><th>Task</th><th>Robot</th><th>Outcome</th><th>Calling Box</th><th>Execution</th><th>Subjob Runs</th></tr></thead><tbody id="projectRecordBody"><tr><td colspan="8" class="empty-cell">Waiting for records</td></tr></tbody></table></div>
+          </details>
         </section>
 
         <section class="view-panel" data-view-panel="operations" aria-labelledby="operationsHeading">

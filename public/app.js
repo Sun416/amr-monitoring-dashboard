@@ -1474,7 +1474,7 @@ function renderProjectAnalytics(data) {
 
   if (elements.projectDataScope) {
     elements.projectDataScope.dataset.tone = 'neutral';
-    elements.projectDataScope.textContent = `${projectLabel} / ${taskLabel} · ${formatTaskLocalDateTime(summary.analysis_start)} to ${formatTaskLocalDateTime(summary.analysis_end)} · ${formatNumber(summary.queue_count)} task records, ${formatNumber(summary.robot_count)} robots. Execution time is summed from closed subjob runs; the source records outcome status only.`;
+    elements.projectDataScope.textContent = `${projectLabel} / ${taskLabel} · ${formatTaskLocalDateTime(summary.analysis_start)} to ${formatTaskLocalDateTime(summary.analysis_end)} · ${formatNumber(summary.queue_count)} records · ${formatNumber(summary.robot_count)} robots`;
   }
 
   /*
