@@ -248,16 +248,18 @@
 
           <article class="panel">
             <header class="panel-header"><div><span class="panel-kicker">PROJECTS</span><h3>Projects in the Analysis Window</h3><p>Select a row to scope every panel below to that project.</p></div></header>
+            <div id="projectListChart" class="project-chart-bars empty-state">Waiting for project data</div>
             <div class="table-scroll"><table class="compact-table project-table"><thead><tr><th>Project</th><th>Task Records</th><th>Tasks</th><th>Robots</th><th>Completed</th><th>Unsuccessful</th><th>Execution Time</th><th>Latest Record</th></tr></thead><tbody id="projectListBody"><tr><td colspan="8" class="empty-cell">Waiting for project data</td></tr></tbody></table></div>
           </article>
 
           <article class="panel">
             <header class="panel-header"><div><span class="panel-kicker">TASKS</span><h3 id="projectTaskTitle">Tasks in Scope</h3><p>Select a task to narrow the robot breakdown, trend and records below.</p></div></header>
+            <div id="projectTaskChart" class="project-chart-bars empty-state">Waiting for task data</div>
             <div class="table-scroll"><table class="compact-table project-task-table"><thead><tr><th>Task</th><th>Project</th><th>Task Records</th><th>Robots</th><th>Completed</th><th>Unsuccessful</th><th>Open</th><th>Avg Execution</th><th>Latest Record</th></tr></thead><tbody id="projectTaskBody"><tr><td colspan="9" class="empty-cell">Waiting for task data</td></tr></tbody></table></div>
           </article>
 
           <div class="two-column-grid task-analysis-grid">
-            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">ROBOTS IN SCOPE</span><h3 id="projectRobotTitle">Robots Carrying This Work</h3><p>Identity resolves through MA_AMR.id, never the robot code.</p></div></header><div class="table-scroll"><table class="compact-table project-robot-table"><thead><tr><th>Robot</th><th>Task Records</th><th>Tasks</th><th>Completed</th><th>Unsuccessful</th><th>Avg Execution</th></tr></thead><tbody id="projectRobotBody"><tr><td colspan="6" class="empty-cell">Waiting for robot breakdown</td></tr></tbody></table></div></article>
+            <article class="panel"><header class="panel-header"><div><span class="panel-kicker">ROBOTS IN SCOPE</span><h3 id="projectRobotTitle">Robots Carrying This Work</h3><p>Identity resolves through MA_AMR.id, never the robot code.</p></div></header><div id="projectRobotChart" class="project-chart-bars empty-state">Waiting for robot breakdown</div><div class="table-scroll"><table class="compact-table project-robot-table"><thead><tr><th>Robot</th><th>Task Records</th><th>Tasks</th><th>Completed</th><th>Unsuccessful</th><th>Avg Execution</th></tr></thead><tbody id="projectRobotBody"><tr><td colspan="6" class="empty-cell">Waiting for robot breakdown</td></tr></tbody></table></div></article>
             <article class="panel"><header class="panel-header"><div><span class="panel-kicker">OUTCOMES</span><h3>Recorded Outcomes</h3><p>The source records outcome status only; it holds no root-cause field.</p></div></header><div id="projectOutcomeChart" class="task-idle-cause-chart empty-state">Waiting for outcome data</div></article>
           </div>
 

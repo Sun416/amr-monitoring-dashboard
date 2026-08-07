@@ -1474,7 +1474,7 @@ function renderProjectAnalytics(data) {
 
   if (elements.projectDataScope) {
     elements.projectDataScope.dataset.tone = 'neutral';
-    elements.projectDataScope.textContent = `${projectLabel} / ${taskLabel} · ${formatTaskLocalDateTime(summary.analysis_start)} to ${formatTaskLocalDateTime(summary.analysis_end)} · window totals: ${formatNumber(summary.queue_count)} task records across ${formatNumber(summary.project_count)} projects, ${formatNumber(summary.task_count)} tasks and ${formatNumber(summary.robot_count)} robots. Execution time is summed from closed subjob runs; the source records outcome status only and holds no root-cause field.`;
+    elements.projectDataScope.textContent = `${projectLabel} / ${taskLabel} · ${formatTaskLocalDateTime(summary.analysis_start)} to ${formatTaskLocalDateTime(summary.analysis_end)} · ${formatNumber(summary.queue_count)} task records, ${formatNumber(summary.robot_count)} robots. Execution time is summed from closed subjob runs; the source records outcome status only.`;
   }
 
   /*
@@ -1525,8 +1525,23 @@ function renderProjectAnalytics(data) {
   }
 
   renderProjectList(data.projects || []);
+  renderAnalysisBarChart(elements.projectListChart, (data.projects || []).map((row) => ({
+    label: row.project_name || 'Unmapped project',
+    value: asNumber(row.queue_count),
+    detail: `${formatNumber(row.task_count)} tasks · ${formatNumber(row.robot_count)} robots · ${formatSeconds(row.execution_seconds)}`
+  })), { emptyText: 'No project records in this window' });
   renderProjectTasks(data.tasks || []);
+  renderAnalysisBarChart(elements.projectTaskChart, (data.tasks || []).map((row) => ({
+    label: row.task_name || `Job ${row.job_id}`,
+    value: asNumber(row.queue_count),
+    detail: `${formatNumber(row.completed_count)} completed · ${formatNumber(row.unsuccessful_count)} unsuccessful`
+  })), { emptyText: 'No task records in this scope' });
   renderProjectRobots(robotRows);
+  renderAnalysisBarChart(elements.projectRobotChart, robotRows.map((row) => ({
+    label: row.robot_name || 'Unmapped robot',
+    value: asNumber(row.queue_count),
+    detail: `${formatNumber(row.completed_count)} completed · ${formatNumber(row.unsuccessful_count)} unsuccessful${row.average_execution_seconds == null ? '' : ` · ${formatSeconds(row.average_execution_seconds)} avg`}`
+  })), { emptyText: 'No robot carried this work in the selected scope' });
   renderProjectOutcomes(data.outcomes || []);
   renderTaskLabelTrend(elements.projectTrendChart, data.hourlyTrend || [], {
     labelKey: 'robot_name',

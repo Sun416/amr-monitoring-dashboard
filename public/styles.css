@@ -544,6 +544,10 @@ button { cursor: pointer; }
 }
 .analysis-bar-chart.compact { min-height: 220px; gap: 11px; }
 .analysis-bar-chart.empty-state { place-items: center; align-content: center; }
+.project-chart-bars {
+  padding: 4px 16px 8px;
+}
+
 .analysis-bar-row {
   display: grid;
   grid-template-columns: minmax(104px, 160px) minmax(100px, 1fr) auto;
