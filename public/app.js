@@ -1031,10 +1031,11 @@ function renderTaskLabelTrend(host, rows, options = {}) {
   };
   const moveTooltip = (event, item) => {
     const svgRect = svg.getBoundingClientRect();
-    const relativeX = event.clientX - svgRect.left;
+    const renderedX = event.clientX - svgRect.left;
+    const viewX = svgRect.width > 0 ? (renderedX / svgRect.width) * width : renderedX;
     const index = Math.min(
       hourLabels.length - 1,
-      Math.max(0, Math.round((relativeX - margin.left) / plotWidth * (hourLabels.length - 1)))
+      Math.max(0, Math.round((viewX - margin.left) / plotWidth * (hourLabels.length - 1)))
     );
     tooltip.textContent = tooltipText(item, hourLabels[index]);
     tooltip.hidden = false;
