@@ -26,11 +26,11 @@
 
       <nav class="directory" aria-label="Analytics directory">
         <p class="directory-label">Analytics Directory</p>
-        <button class="nav-item active" type="button" data-view="overview">
-          <span class="nav-index">01</span><span><strong>Analysis Center</strong><small>Causes, evidence and maintenance actions</small></span>
+        <button class="nav-item active" type="button" data-view="projects">
+          <span class="nav-index">01</span><span><strong>Project &amp; Task</strong><small>Filter a project or task, then see its robots</small></span>
         </button>
-        <button class="nav-item" type="button" data-view="projects">
-          <span class="nav-index">02</span><span><strong>Project &amp; Task</strong><small>Filter a project or task, then see its robots</small></span>
+        <button class="nav-item" type="button" data-view="overview">
+          <span class="nav-index">02</span><span><strong>Analysis Center</strong><small>Causes, evidence and maintenance actions</small></span>
         </button>
         <button class="nav-item" type="button" data-view="operations">
           <span class="nav-index">03</span><span><strong>Operations</strong><small>Status, mode and position</small></span>
@@ -91,10 +91,16 @@
       </header>
 
       <main class="content">
-        <section class="view-panel active" data-view-panel="overview" aria-labelledby="overviewHeading">
+        <section class="view-panel" data-view-panel="overview" aria-labelledby="overviewHeading">
           <div class="section-intro compact">
             <div><span class="section-kicker">RULE-BACKED OPERATIONS</span><h2 id="overviewHeading">DWS freshness, timeout causes and next action</h2><p>Only non-snapshot DWS data passing the 30-minute gate is treated as current. Timed-out values are suppressed.</p></div>
             <button class="download-button" type="button" data-export="analysis">Download Analysis CSV</button>
+          </div>
+
+          <div class="task-analytics-controls project-filter-bar" aria-label="Analysis Center project scope">
+            <label><span>Project</span><select id="analysisProjectSelect" aria-label="Scope Analysis Center by project"><option value="">All projects</option></select></label>
+            <label><span>Task</span><select id="analysisTaskSelect" aria-label="Scope Analysis Center by task"><option value="">All tasks</option></select></label>
+            <button id="analysisClearFilter" class="button secondary compact-button" type="button">Clear</button>
           </div>
 
           <article class="analysis-verdict compact-verdict" id="analysisVerdict" data-severity="INFO">
@@ -112,7 +118,7 @@
           <div class="analysis-command-grid">
             <article class="panel fleet-status-panel">
               <header class="panel-header">
-                <div><span class="panel-kicker">ALL ROBOTS</span><h3>DWS freshness by robot</h3><p>Current requires event time, DWS load time and event-to-load lag to stay within 30 minutes.</p></div>
+                <div><span class="panel-kicker" id="fleetScopeLabel">ALL ROBOTS</span><h3>DWS freshness by robot</h3><p>Current requires event time, DWS load time and event-to-load lag to stay within 30 minutes.</p></div>
               </header>
               <div class="fleet-status-body">
                 <div id="fleetStatusDonut" class="fleet-donut-host empty-state">Waiting for robot status</div>
@@ -219,7 +225,7 @@
 
         </section>
 
-        <section class="view-panel" data-view-panel="projects" aria-labelledby="projectsHeading">
+        <section class="view-panel active" data-view-panel="projects" aria-labelledby="projectsHeading">
           <div class="section-intro">
             <div><span class="section-kicker">PROJECT &amp; TASK</span><h2 id="projectsHeading">Project and Task Analysis</h2><p>Pick a project, then a task, to see how that work ran and which robots carried it. Robots are a breakdown of the selected scope, not the entry point.</p></div>
             <button class="download-button" type="button" data-export="project-analytics">Download CSV</button>

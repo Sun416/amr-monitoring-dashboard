@@ -38,8 +38,8 @@ const state = {
 };
 
 const VIEW_META = {
-  overview: { eyebrow: '01 · ANALYSIS CENTER', title: 'Analysis Center', description: 'Start with causes, supporting evidence and the next maintenance action.' },
-  projects: { eyebrow: '02 · PROJECT & TASK', title: 'Project and Task Analysis', description: 'Filter a project or task first, then review how it ran and which robots carried it.' },
+  projects: { eyebrow: '01 · PROJECT & TASK', title: 'Project and Task Analysis', description: 'Filter a project or task first, then review how it ran and which robots carried it.' },
+  overview: { eyebrow: '02 · ANALYSIS CENTER', title: 'Analysis Center', description: 'Start with causes, supporting evidence and the next maintenance action.' },
   operations: { eyebrow: '03 · OPERATIONS', title: 'Operating Status', description: 'Review status, mode and robot position.' },
   tasks: { eyebrow: '04 · TASKS', title: 'Task Analytics', description: 'Review DWS utilization, idle causes, Calling Boxes, and assigned tasks.' },
   energy: { eyebrow: '05 · ENERGY', title: 'Energy Analytics', description: 'Identify exact robot IDs at low-battery risk and review the trend.' },
@@ -58,7 +58,7 @@ const elements = Object.fromEntries(
     'metricOffline', 'metricJobs', 'metricJobScope', 'metricBattery', 'metricLowBattery', 'metricRssi', 'metricWifiCoverage',
     'metricZeroSignal', 'metricZeroSignalScope', 'metricAlarms', 'metricAlarmScope', 'metricTaskSuccess', 'metricTaskSuccessScope',
     'analysisVerdict', 'analysisHeadline', 'analysisSummary', 'analysisConfidence', 'analysisRuleVersion',
-    'analysisRobotCount', 'analysisCoverage', 'analysisCoverageDetail', 'analysisGapCount', 'analysisWorkloadState',
+    'analysisRobotCount', 'analysisCoverage', 'analysisCoverageDetail', 'analysisGapCount', 'fleetScopeLabel', 'analysisWorkloadState',
     'analysisWorkloadDetail', 'analysisDiagnosticList', 'workloadCauseStatus', 'workloadAnchor',
     'workloadGroupSummary', 'workloadAnalysisBody', 'operationalAnalysisBody', 'measurementGapList',
     'fleetStatusDonut', 'fleetRobotGrid', 'priorityRepairSummary',
@@ -82,6 +82,7 @@ const elements = Object.fromEntries(
     'taskUsageSubtitle', 'taskUsageChart', 'taskIdleTrendChart', 'taskIdleCauseChart',
     'taskCallingBoxTitle', 'taskCallingBoxList', 'taskAssignedTitle', 'taskAssignedList',
     'taskCallingBoxTrendChart', 'taskCallingBoxTrendSubtitle', 'taskAssignedTrendChart', 'taskAssignedTrendSubtitle',
+    'analysisProjectSelect', 'analysisTaskSelect', 'analysisClearFilter',
     'projectSelect', 'projectTaskSelect', 'projectClearFilter', 'projectDataScope',
     'projectQueueValue', 'projectQueueDetail', 'projectCompletionValue', 'projectCompletionDetail',
     'projectExecutionValue', 'projectExecutionDetail', 'projectRobotValue', 'projectRobotIds',
@@ -1174,6 +1175,8 @@ function setProjectScope({ projectId, jobId }) {
   state.selectedJobId = jobId ? String(jobId) : null;
   if (elements.projectSelect) elements.projectSelect.value = state.selectedProjectId || '';
   if (elements.projectTaskSelect) elements.projectTaskSelect.value = state.selectedJobId || '';
+  if (elements.analysisProjectSelect) elements.analysisProjectSelect.value = state.selectedProjectId || '';
+  if (elements.analysisTaskSelect) elements.analysisTaskSelect.value = state.selectedJobId || '';
   loadProjectAnalytics();
 }
 
@@ -1212,6 +1215,30 @@ function populateProjectSelectors(data) {
   if (state.selectedJobId && !available.has(state.selectedJobId)) state.selectedJobId = null;
   fillSelect(
     elements.projectTaskSelect,
+    [{ value: '', label: `All tasks (${tasks.length})` }].concat(
+      tasks.map((row) => ({
+        value: String(row.job_id),
+        label: `${row.task_name} · ${formatNumber(row.queue_count)} records`
+      }))
+    ),
+    state.selectedJobId
+  );
+
+  fillSelect(
+    elements.analysisProjectSelect,
+    [{ value: '', label: `All projects (${(data.projects || []).length})` }].concat(
+      (data.projects || [])
+        .filter((row) => row.project_id !== null && row.project_id !== undefined)
+        .map((row) => ({
+          value: String(row.project_id),
+          label: `${row.project_name} · ${formatNumber(row.queue_count)} records`
+        }))
+    ),
+    state.selectedProjectId
+  );
+
+  fillSelect(
+    elements.analysisTaskSelect,
     [{ value: '', label: `All tasks (${tasks.length})` }].concat(
       tasks.map((row) => ({
         value: String(row.job_id),
@@ -1432,6 +1459,9 @@ function renderProjectRecords(rows = []) {
 function renderProjectAnalytics(data) {
   const summary = data.summary || {};
   populateProjectSelectors(data);
+  if (state.dashboard) {
+    renderAnalysis(state.dashboard.analysis, state.dashboard.analysisReadiness, state.dashboard.robots);
+  }
 
   const projectLabel = state.selectedProjectId
     ? (data.projects || []).find((row) => String(row.project_id) === state.selectedProjectId)?.project_name
@@ -1875,7 +1905,7 @@ function renderFleetDonut(host, segments, total) {
   host.append(svg, legend);
 }
 
-function renderFleetStatusOverview(analysis, robots = []) {
+function renderFleetStatusOverview(analysis, robots = [], emptyMessage = 'No robots match the selected scope') {
   if (!elements.fleetStatusDonut || !elements.fleetRobotGrid) return;
 
   const statusCounts = { current: 0, delayed: 0, missing: 0 };
@@ -1896,6 +1926,11 @@ function renderFleetStatusOverview(analysis, robots = []) {
     (analysis?.priorityDiagnostics || []).map((diagnostic) => [String(diagnostic.masterRobotId), diagnostic])
   );
   elements.fleetRobotGrid.replaceChildren();
+  if (!robots.length) {
+    elements.fleetRobotGrid.classList.add('empty-state');
+    elements.fleetRobotGrid.textContent = emptyMessage;
+    return;
+  }
   elements.fleetRobotGrid.classList.remove('empty-state');
 
   [...robots]
@@ -2068,6 +2103,45 @@ function renderAnalysisVisuals(analysis) {
   });
 }
 
+/*
+  Project-scope helpers for the Analysis Center.
+
+  The dashboard is loaded fleet-wide, but the Analysis Center may be scoped to
+  a project or task. Robot membership comes from the project analytics robot
+  breakdown, which resolves display names through dbo.MA_AMR. Telemetry
+  diagnostics are then filtered to exactly those master robot IDs.
+*/
+function projectScopeRobotNames() {
+  const rows = state.projectAnalytics?.robots || [];
+  return new Set(rows.map((row) => String(row.robot_name || '').trim()).filter(Boolean));
+}
+
+function scopedAnalysisRobots(robots = []) {
+  if (!state.selectedProjectId) return robots;
+  const names = projectScopeRobotNames();
+  if (!names.size) return [];
+  return robots.filter((robot) => (
+    names.has(String(robot.robot_code || '').trim())
+    || names.has(String(robot.robot_name || '').trim())
+  ));
+}
+
+function scopedAnalysisDiagnostics(analysis, robots = []) {
+  if (!analysis || !state.selectedProjectId) return analysis;
+  const masterIds = new Set(
+    scopedAnalysisRobots(robots)
+      .map((robot) => String(robot.master_robot_id))
+      .filter((id) => id !== '' && id !== 'undefined' && id !== 'null')
+  );
+  if (!masterIds.size) return { ...analysis, priorityDiagnostics: [] };
+  return {
+    ...analysis,
+    priorityDiagnostics: (analysis.priorityDiagnostics || []).filter((diagnostic) => (
+      masterIds.has(String(diagnostic.masterRobotId))
+    ))
+  };
+}
+
 function renderAnalysis(analysis, readiness = {}, robots = []) {
   if (!analysis) {
     elements.analysisHeadline.textContent = 'Analysis is unavailable';
@@ -2076,14 +2150,17 @@ function renderAnalysis(analysis, readiness = {}, robots = []) {
     return;
   }
 
-  const assessment = analysis.fleetAssessment || {};
-  const diagnostics = analysis.priorityDiagnostics || [];
-  const quality = analysis.dataQuality || {};
-  const gaps = analysis.measurementGaps || [];
+  const scopedRobots = scopedAnalysisRobots(robots);
+  const scopedAnalysis = scopedAnalysisDiagnostics(analysis, robots);
+  const assessment = scopedAnalysis.fleetAssessment || {};
+  const diagnostics = scopedAnalysis.priorityDiagnostics || [];
+  const quality = scopedAnalysis.dataQuality || {};
+  const gaps = scopedAnalysis.measurementGaps || [];
   const unavailableGapCount = gaps.filter((gap) => gap.status === 'NOT_MEASURABLE').length;
   const diagnosticGroups = groupedDiagnostics(diagnostics);
   const topDiagnosticGroup = diagnosticGroups[0];
   const reviewedRobotCount = new Set(diagnostics.map((diagnostic) => String(diagnostic.masterRobotId))).size;
+  const projectScopeActive = Boolean(state.selectedProjectId);
 
   elements.analysisVerdict.dataset.severity = assessment.severity || 'INFO';
   elements.analysisHeadline.textContent = reviewedRobotCount
@@ -2091,7 +2168,9 @@ function renderAnalysis(analysis, readiness = {}, robots = []) {
     : 'No current transparent-rule alert';
   elements.analysisSummary.textContent = topDiagnosticGroup
     ? `Top cause: ${diagnosisChartLabel(topDiagnosticGroup.representative)} · ${formatNumber(topDiagnosticGroup.robots.length)} robots`
-    : 'No rule-backed maintenance action is required from the current evidence.';
+    : projectScopeActive
+      ? 'No rule-backed maintenance action is required from the selected project scope.'
+      : 'No rule-backed maintenance action is required from the current evidence.';
   elements.analysisSummary.title = assessment.summary || '';
   elements.analysisConfidence.textContent = `Evidence coverage: ${assessment.confidence || '--'}`;
   elements.analysisRuleVersion.textContent = `Transparent rules: ${analysis.ruleVersion || '--'}`;
@@ -2099,8 +2178,15 @@ function renderAnalysis(analysis, readiness = {}, robots = []) {
   elements.analysisCoverage.textContent = formatPercent(quality.statusCoveragePercent, 1);
   elements.analysisCoverageDetail.textContent = `${formatNumber(quality.statusCoverageRobotCount)} / ${formatNumber(quality.totalRobotCount)} robots have status-history samples`;
   elements.analysisGapCount.textContent = formatNumber(unavailableGapCount);
-  renderFleetStatusOverview(analysis, robots);
-  renderPriorityRepair(analysis);
+  if (elements.fleetScopeLabel) {
+    elements.fleetScopeLabel.textContent = projectScopeActive ? 'PROJECT SCOPE' : 'ALL ROBOTS';
+  }
+  renderFleetStatusOverview(
+    scopedAnalysis,
+    scopedRobots,
+    projectScopeActive ? 'No robots in the selected project scope' : 'Waiting for robot status'
+  );
+  renderPriorityRepair(scopedAnalysis);
 }
 
 /*
@@ -4595,6 +4681,19 @@ if (elements.projectTaskSelect) {
 if (elements.projectClearFilter) {
   elements.projectClearFilter.addEventListener('click', () => setProjectScope({ projectId: null, jobId: null }));
 }
+if (elements.analysisProjectSelect) {
+  elements.analysisProjectSelect.addEventListener('change', () => {
+    setProjectScope({ projectId: elements.analysisProjectSelect.value, jobId: null });
+  });
+}
+if (elements.analysisTaskSelect) {
+  elements.analysisTaskSelect.addEventListener('change', () => {
+    setProjectScope({ projectId: state.selectedProjectId, jobId: elements.analysisTaskSelect.value });
+  });
+}
+if (elements.analysisClearFilter) {
+  elements.analysisClearFilter.addEventListener('click', () => setProjectScope({ projectId: null, jobId: null }));
+}
 elements.taskRobotToggle.addEventListener('click', () => {
   const opening = elements.taskRobotMenu.hidden;
   elements.taskRobotMenu.hidden = !opening;
@@ -4635,7 +4734,7 @@ window.addEventListener('hashchange', () => {
 updateClock();
 window.setInterval(updateClock, 1000);
 const initialView = location.hash.slice(1);
-activateView(VIEW_META[initialView] ? initialView : 'overview', { updateHash: false });
+activateView(VIEW_META[initialView] ? initialView : 'projects', { updateHash: false });
 loadDashboard();
 loadTaskAnalytics();
 loadProjectAnalytics();
