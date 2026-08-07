@@ -820,21 +820,21 @@ function renderTaskIdleTrend(host, rows = []) {
   host.append(svg);
 }
 
-function renderTaskIdleCauses(summary) {
-  if (!elements.taskIdleCauseChart) return;
+function renderTaskIdleCauses(summary, host = elements.taskIdleCauseChart) {
+  if (!host) return;
   const causes = [
     { label: 'No task', value: asNumber(summary.no_task_seconds), color: '#2563eb' },
     { label: 'Waiting', value: asNumber(summary.waiting_seconds), color: '#d97706' },
     { label: 'Charging', value: asNumber(summary.charging_seconds), color: '#059669' }
   ];
   const total = causes.reduce((sum, item) => sum + item.value, 0);
-  elements.taskIdleCauseChart.replaceChildren();
+  host.replaceChildren();
   if (!total) {
-    elements.taskIdleCauseChart.classList.add('empty-state');
-    elements.taskIdleCauseChart.textContent = 'No confirmed idle-time evidence is available in this period.';
+    host.classList.add('empty-state');
+    host.textContent = 'No confirmed idle-time evidence is available in this period.';
     return;
   }
-  elements.taskIdleCauseChart.classList.remove('empty-state');
+  host.classList.remove('empty-state');
   let cursor = 0;
   const segments = causes.map((item) => {
     const end = cursor + (100 * item.value / total);
@@ -854,7 +854,7 @@ function renderTaskIdleCauses(summary) {
     row.innerHTML = `<i style="background:${item.color}"></i><span>${item.label}</span><b>${formatSeconds(item.value)}</b>`;
     legend.append(row);
   });
-  elements.taskIdleCauseChart.append(donut, legend);
+  host.append(donut, legend);
 }
 
 function taskExceptionFinding(type) {
@@ -1632,7 +1632,7 @@ function renderProjectAnalytics(data) {
     value: asNumber(row.queue_count),
     detail: `${formatNumber(row.completed_count)} completed · ${formatNumber(row.unsuccessful_count)} unsuccessful${row.average_execution_seconds == null ? '' : ` · ${formatSeconds(row.average_execution_seconds)} avg`}`
   })), { emptyText: 'No robot carried this work in the selected scope' });
-  renderProjectOutcomes(data.outcomes || []);
+  renderTaskIdleCauses(data.idleCauses || {}, elements.projectOutcomeChart);
   renderTaskLabelTrend(elements.projectTrendChart, data.hourlyTrend || [], {
     labelKey: 'robot_name',
     valueKey: 'queue_count',

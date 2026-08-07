@@ -371,7 +371,8 @@ async function loadProjectAnalytics({ start, end, projectId, jobId, projectIds, 
     robots: sets[3] || [],
     hourlyTrend: sets[4] || [],
     outcomes: sets[5] || [],
-    recentQueues: sets[6] || []
+    recentQueues: sets[6] || [],
+    idleCauses: sets[7]?.[0] || {}
   };
 }
 

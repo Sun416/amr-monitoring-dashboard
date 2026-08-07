@@ -380,3 +380,42 @@ AND
     OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
 )
 ORDER BY scoped.[event_time] DESC;
+
+/*
+    Idle-time causes for the robots that carried the selected scope.
+
+    The source is DWS.dws_robot_task_hourly (robot + hour grain). Only robots
+    that appear in the scoped queue set are counted, so the chart describes
+    "how the robots of this project spent their non-executing time", never a
+    project-level aggregate that the telemetry schema cannot support.
+*/
+SELECT
+    SUM(h.[no_task_seconds]) AS [no_task_seconds],
+    SUM(h.[waiting_seconds]) AS [waiting_seconds],
+    SUM(h.[charging_seconds]) AS [charging_seconds],
+    SUM(h.[executing_seconds]) AS [executing_seconds],
+    COUNT(DISTINCT h.[robot_code]) AS [robot_count]
+FROM [DWS].[dws_robot_task_hourly] AS h
+WHERE h.[stat_hour] >= @requested_start
+  AND h.[stat_hour] < @requested_end
+  AND EXISTS
+  (
+      SELECT 1
+      FROM @scoped_queue AS scoped
+      WHERE scoped.[robot_name] = h.[robot_code]
+        AND
+        (
+            NOT EXISTS (SELECT 1 FROM @selected_projects)
+            OR EXISTS (SELECT 1 FROM @selected_projects AS selected_project WHERE selected_project.[project_id] = scoped.[project_id])
+        )
+        AND
+        (
+            NOT EXISTS (SELECT 1 FROM @selected_jobs)
+            OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
+        )
+        AND
+        (
+            NOT EXISTS (SELECT 1 FROM @selected_robots)
+            OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
+        )
+  );
