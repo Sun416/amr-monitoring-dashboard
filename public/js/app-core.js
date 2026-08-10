@@ -27,6 +27,9 @@ const state = {
   taskRobots: [],
   taskTopLimit: 5,
   taskRequestId: 0,
+  taskStateQuality: null,
+  taskStateQualityRequestId: 0,
+  taskStateQualityLoading: false,
   /*
     Project and task first. These scope every panel in the projects view;
     null means "no filter", so the view opens on the whole window.
@@ -42,13 +45,12 @@ const VIEW_META = {
   projects: { eyebrow: '01 · PROJECT & TASK', title: 'Project and Task Analysis', description: 'Filter a project or task first, then review how it ran and which robots carried it.' },
   overview: { eyebrow: '02 · ANALYSIS CENTER', title: 'Analysis Center', description: 'Start with causes, supporting evidence and the next maintenance action.' },
   operations: { eyebrow: '03 · OPERATIONS', title: 'Operating Status', description: 'Review status, mode and robot position.' },
-  tasks: { eyebrow: '04 · TASKS', title: 'Task Analytics', description: 'Review DWS utilization, idle causes, Calling Boxes, and assigned tasks.' },
-  energy: { eyebrow: '05 · ENERGY', title: 'Energy Analytics', description: 'Identify exact robot IDs at low-battery risk and review the trend.' },
-  network: { eyebrow: '06 · RUNNING WIFI', title: 'Running-Task WiFi Signal Analysis', description: 'Analyze signal trends, minimum-RSSI evidence, robot differences, and target-POI risks during Running tasks.' },
-  alarms: { eyebrow: '07 · ALERTS', title: 'Robot Alert Causes', description: 'See operational faults and telemetry-quality issues by robot ID.' },
-  robots: { eyebrow: '08 · ROBOT DETAILS', title: 'Robot Details', description: 'Search robot-level operating data in one place.' },
-  'robot-profile': { eyebrow: '09 · ROBOT PROFILE', title: 'Robot Profile', description: 'Select one Robot ID and review its complete current and historical status.' },
-  'data-quality': { eyebrow: '10 · DATA QUALITY', title: 'Data Quality', description: 'Review data freshness, lag and DWS load batches.' }
+  energy: { eyebrow: '04 · ENERGY', title: 'Energy Analytics', description: 'Identify exact robot IDs at low-battery risk and review the trend.' },
+  network: { eyebrow: '05 · RUNNING WIFI', title: 'Running-Task WiFi Signal Analysis', description: 'Analyze signal trends, minimum-RSSI evidence, robot differences, and target-POI risks during Running tasks.' },
+  alarms: { eyebrow: '06 · ALERTS', title: 'Robot Alert Causes', description: 'See operational faults and telemetry-quality issues by robot ID.' },
+  robots: { eyebrow: '07 · ROBOT DETAILS', title: 'Robot Details', description: 'Search robot-level operating data in one place.' },
+  'robot-profile': { eyebrow: '08 · ROBOT PROFILE', title: 'Robot Profile', description: 'Select one Robot ID and review its complete current and historical status.' },
+  'data-quality': { eyebrow: '09 · DATA QUALITY', title: 'Data Quality', description: 'Review freshness, DWS batches and task-state coverage exceptions.' }
 };
 
 const elements = Object.fromEntries(
@@ -97,6 +99,9 @@ const elements = Object.fromEntries(
     'alertList', 'alertBadge', 'robotMapLayer', 'mapEmpty', 'mapSelect', 'mappedRobotCount', 'mapCodeCount',
     'selectedRobot', 'robotVitalsBody', 'batteryChart',
     'jobChart', 'alarmChart', 'queueChart', 'batteryTrendAnchor', 'batchTableBody',
+    'dataQualityTaskStateRefresh', 'dataQualityTaskStateScope', 'dataQualityTaskStateValue', 'dataQualityTaskStateDetail',
+    'dataQualityTaskGapValue', 'dataQualityTaskGapDetail', 'dataQualityTaskStateExceptionPanel',
+    'dataQualityTaskStateExceptionSummary', 'dataQualityTaskStateExceptionBody',
     'profileRobotSelect', 'profileRobotSubtitle', 'profileAlertBanner', 'profileStatusValue', 'profileStatusDetail',
     'profileBatteryValue', 'profileBatteryDetail', 'profileTaskValue', 'profileTaskDetail', 'profileWifiValue',
     'profileWifiDetail', 'profilePositionValue', 'profilePositionDetail', 'profileDataTimeValue', 'profileDataTimeDetail',
@@ -138,6 +143,7 @@ function activateView(view, { updateHash = true } = {}) {
   closeSidebar();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (view === 'robot-profile' && state.dashboard) loadRobotProfile();
+  if (view === 'data-quality' && state.dashboard) loadTaskStateQuality();
 }
 
 function svgElement(name, attributes = {}) {
@@ -509,6 +515,7 @@ async function loadDashboard({ announce = false } = {}) {
     }
     state.dashboard = await requestJson(`/api/dashboard?${params}`);
     renderDashboard(state.dashboard);
+    if (state.currentView === 'data-quality') loadTaskStateQuality();
     if (announce) showToast(`Refreshed: ${robotTypeLabel()} · ${wifiRefreshLabel(analysisWindow)}`);
   } catch (error) {
     renderConnectionError(error);

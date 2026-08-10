@@ -79,11 +79,6 @@ function renderDashboard(data) {
   elements.operationsOfflineIds.textContent = robotIdSummary(robots, (robot) => normalizedOnlineStatus(robot.online_status) !== 'online');
   elements.operationsActiveValue.textContent = 'Not available';
   elements.operationsActiveIds.textContent = 'DWS daily aggregates do not contain current task IDs';
-  elements.taskSuccessValue.textContent = taskSuccessRate == null ? '--' : formatPercent(taskSuccessRate, 1);
-  elements.taskFailureValue.textContent = formatNumber(taskTotals.failed);
-  elements.taskFailureSummary.textContent = taskFailureSummary(data.taskFailureOutcomes || []);
-  elements.taskActiveValue.textContent = 'Not available';
-  elements.taskActiveIds.textContent = 'Use historical DWS task totals only';
   elements.energyAverageValue.textContent = summary.avg_battery_soc == null ? '--' : `${formatNumber(summary.avg_battery_soc, 1)}%`;
   elements.energyLowBatteryValue.textContent = `${formatNumber(summary.low_battery_robot_count)} robots`;
   elements.energyLowBatteryIds.textContent = robotIdSummary(robots, isLowBattery);
@@ -102,8 +97,6 @@ function renderDashboard(data) {
 
   renderDistribution(elements.statusDistribution, data.statusDistribution, 'status_name');
   renderDistribution(elements.modeDistribution, data.modeDistribution, 'mode_name', 12);
-  renderTasks(robots);
-  renderTaskFailureOutcomes(data.taskFailureOutcomes || []);
   renderAlerts(robots);
   renderMap(robots);
   renderRobotVitals(robots);
@@ -111,14 +104,8 @@ function renderDashboard(data) {
   renderLineChart(elements.batteryChart, data.batteryTrend, {
     valueKey: 'avg_battery_soc', labelKey: 'stat_hour', color: '#2563eb', suffix: '%', fixedRange: [0, 100]
   });
-  renderLineChart(elements.jobChart, data.jobTrend, {
-    valueKey: 'job_count', labelKey: 'stat_date', color: '#059669', suffix: '', nonNegative: true
-  });
   renderLineChart(elements.alarmChart, data.statusTrend, {
     valueKey: 'error_sample_count', labelKey: 'stat_hour', color: '#dc2626', suffix: '', nonNegative: true
-  });
-  renderLineChart(elements.queueChart, data.queueTrend, {
-    valueKey: 'queue_count', labelKey: 'stat_date', color: '#d97706', suffix: '', nonNegative: true
   });
   renderBatches(data.recentBatches || []);
   if (state.currentView === 'robot-profile') loadRobotProfile();

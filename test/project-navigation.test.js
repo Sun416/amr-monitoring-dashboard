@@ -34,7 +34,7 @@ test('project analytics never sends or parses a robot filter', () => {
 
 test('dashboard static files are not cached across a project-filter deployment', () => {
   assert.match(server, /response\.setHeader\('Cache-Control', 'no-store'\)/);
-  assert.match(indexHtml, /project-page\.js\?v=20260810-adaptive-trends-r2/);
+  assert.match(indexHtml, /project-page\.js\?v=20260810-task-page-removal-r1/);
 });
 
 test('project selection clears task selection before reloading the hierarchy', () => {

@@ -3,6 +3,8 @@
 elements.refreshButton.addEventListener('click', () => {
   loadDashboard({ announce: true });
   loadProjectAnalytics();
+  invalidateTaskStateQuality();
+  if (state.currentView === 'data-quality') loadTaskStateQuality({ force: true });
 });
 elements.exportAllButton.addEventListener('click', exportAllData);
 elements.robotSearch.addEventListener('input', () => renderRobotVitals(state.dashboard?.robots || []));
@@ -39,8 +41,9 @@ elements.wifiApplyWindow.addEventListener('click', () => {
   state.selectedWifiPois = [];
   elements.analysisWindowLabel.textContent = `${robotTypeLabel()} · ${analysisWindowLabelText()}`;
   loadDashboard({ announce: true });
-  loadTaskAnalytics();
   loadProjectAnalytics();
+  invalidateTaskStateQuality();
+  if (state.currentView === 'data-quality') loadTaskStateQuality({ force: true });
 });
 if (elements.windowClearButton) {
   elements.windowClearButton.addEventListener('click', () => {
@@ -49,13 +52,11 @@ if (elements.windowClearButton) {
     if (elements.wifiEndTime) elements.wifiEndTime.value = '';
     elements.analysisWindowLabel.textContent = `${robotTypeLabel()} · ${analysisWindowLabelText()}`;
     loadDashboard({ announce: true });
-    loadTaskAnalytics();
     loadProjectAnalytics();
+    invalidateTaskStateQuality();
+    if (state.currentView === 'data-quality') loadTaskStateQuality({ force: true });
   });
 }
-elements.taskApplyWindow.addEventListener('click', () => {
-  loadTaskAnalytics({ announce: true });
-});
 bindMultiSelectToggle(elements.projectToggle, elements.projectMenu);
 bindMultiSelectToggle(elements.taskToggle, elements.taskMenu);
 bindMultiSelectToggle(elements.robotToggle, elements.robotMenu);
@@ -68,21 +69,9 @@ if (elements.projectClearFilter) {
 if (elements.analysisClearFilter) {
   elements.analysisClearFilter.addEventListener('click', () => setProjectScope({ projectIds: [], jobIds: [] }));
 }
-elements.taskRobotToggle.addEventListener('click', () => {
-  const opening = elements.taskRobotMenu.hidden;
-  elements.taskRobotMenu.hidden = !opening;
-  elements.taskRobotToggle.setAttribute('aria-expanded', String(opening));
-});
-document.addEventListener('click', (event) => {
-  if (!elements.taskRobotMenu || elements.taskRobotMenu.hidden) return;
-  if (event.target.closest('.task-robot-picker')) return;
-  elements.taskRobotMenu.hidden = true;
-  elements.taskRobotToggle.setAttribute('aria-expanded', 'false');
-});
-elements.taskTopLimitSelect.addEventListener('change', () => {
-  state.taskTopLimit = Number(elements.taskTopLimitSelect.value) || 5;
-  if (state.taskAnalytics) renderTaskAnalytics(state.taskAnalytics);
-});
+if (elements.dataQualityTaskStateRefresh) {
+  elements.dataQualityTaskStateRefresh.addEventListener('click', () => loadTaskStateQuality({ announce: true, force: true }));
+}
 document.querySelectorAll('[data-export]').forEach((button) => {
   button.addEventListener('click', () => exportDataset(button.dataset.export));
 });
@@ -110,5 +99,4 @@ window.setInterval(updateClock, 1000);
 const initialView = location.hash.slice(1);
 activateView(VIEW_META[initialView] ? initialView : 'projects', { updateHash: false });
 loadDashboard();
-loadTaskAnalytics();
 loadProjectAnalytics();

@@ -35,26 +35,23 @@
         <button class="nav-item" type="button" data-view="operations">
           <span class="nav-index">03</span><span><strong>Operations</strong><small>Status, mode and position</small></span>
         </button>
-        <button class="nav-item" type="button" data-view="tasks">
-          <span class="nav-index">04</span><span><strong>Task Analytics</strong><small>DWS task and queue history</small></span>
-        </button>
         <button class="nav-item" type="button" data-view="energy">
-          <span class="nav-index">05</span><span><strong>Energy</strong><small>Battery level and low-battery risk</small></span>
+          <span class="nav-index">04</span><span><strong>Energy</strong><small>Battery level and low-battery risk</small></span>
         </button>
         <button class="nav-item" type="button" data-view="network">
-          <span class="nav-index">06</span><span><strong>Running-Task WiFi Analysis</strong><small>Running-task RSSI diagnostics</small></span>
+          <span class="nav-index">05</span><span><strong>Running-Task WiFi Analysis</strong><small>Running-task RSSI diagnostics</small></span>
         </button>
         <button class="nav-item" type="button" data-view="alarms">
-          <span class="nav-index">07</span><span><strong>Robot Alert Causes</strong><small>Operational faults and telemetry-quality issues</small></span>
+          <span class="nav-index">06</span><span><strong>Robot Alert Causes</strong><small>Operational faults and telemetry-quality issues</small></span>
         </button>
         <button class="nav-item" type="button" data-view="robots">
-          <span class="nav-index">08</span><span><strong>Robot Details</strong><small>Robot-level operational data</small></span>
+          <span class="nav-index">07</span><span><strong>Robot Details</strong><small>Robot-level operational data</small></span>
         </button>
         <button class="nav-item" type="button" data-view="robot-profile">
-          <span class="nav-index">09</span><span><strong>Robot Profile</strong><small>One robot's complete status</small></span>
+          <span class="nav-index">08</span><span><strong>Robot Profile</strong><small>One robot's complete status</small></span>
         </button>
         <button class="nav-item" type="button" data-view="data-quality">
-          <span class="nav-index">10</span><span><strong>Data Quality</strong><small>Freshness and load batches</small></span>
+          <span class="nav-index">09</span><span><strong>Data Quality</strong><small>Freshness and load batches</small></span>
         </button>
       </nav>
 
@@ -341,26 +338,6 @@
           </article>
         </section>
 
-        <section class="view-panel" data-view-panel="tasks" aria-labelledby="tasksHeading">
-          <div class="task-analytics-controls task-analytics-filter-bar"><div class="task-robot-picker"><span>Robot</span><button id="taskRobotToggle" class="task-robot-toggle" type="button" aria-expanded="false" aria-controls="taskRobotMenu">All robots</button><div id="taskRobotMenu" class="task-robot-menu" hidden></div></div><label><span>Ranking</span><select id="taskTopLimitSelect" aria-label="Task analytics ranking size"><option value="5">Top 5</option><option value="10">Top 10</option></select></label><button id="taskApplyWindow" class="button secondary compact-button" type="button">Apply</button></div>
-          <article class="task-data-scope" id="taskDataScope" data-tone="neutral">Loading Task Analytics DWS data…</article>
-          <div class="focus-strip task-summary-strip task-kpi-strip"><div><span>Utilization Rate</span><strong id="taskUtilizationValue">--</strong><small id="taskUtilizationDetail">Execution / known state time</small></div><div><span>Execution Time</span><strong id="taskExecutionValue">--</strong><small id="taskExecutionDetail">Closed task intervals only</small></div><div><span>Idle Time</span><strong id="taskIdleValue">--</strong><small id="taskIdleDetail">No task + waiting + charging</small></div><div><span>State Data Exception</span><strong id="taskDataExceptionValue">--</strong><small id="taskDataExceptionDetail">Missing state evidence</small></div></div>
-          <details id="taskStateExceptionPanel" class="task-state-exception-panel" hidden><summary><span>State data exception details</span><small id="taskStateExceptionSummary">Latest affected robot-hours</small></summary><div class="table-scroll"><table class="task-state-exception-table"><thead><tr><th>Robot</th><th>Hour</th><th>Coverage finding</th><th>Battery / task evidence</th><th>Last battery event before hour</th></tr></thead><tbody id="taskStateExceptionBody"><tr><td colspan="5" class="empty-cell">Waiting for DWS state-exception data</td></tr></tbody></table></div></details>
-          <article class="panel chart-panel task-usage-panel"><header class="panel-header"><div><span class="panel-kicker">ADAPTIVE USAGE</span><h3 id="taskUsageTitle">Execution Trend by Robot · 15 Minutes</h3><p id="taskUsageSubtitle">Task evidence is grouped into adaptive time buckets and selected robot.</p></div></header><div id="taskUsageChart" class="chart-host"></div></article>
-          <div class="two-column-grid task-analysis-grid"><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">IDLE TIME</span><h3 id="taskIdleTrendTitle">Idle Time Trend · 15 Minutes</h3><p id="taskIdleTrendSubtitle">Idle minutes by adaptive time bucket. Charging takes precedence over waiting.</p></div></header><div id="taskIdleTrendChart" class="chart-host"></div></article><article class="panel"><header class="panel-header"><div><span class="panel-kicker">IDLE TIME</span><h3>Idle Time Causes</h3><p>No task, waiting, and charging share of observed idle time.</p></div></header><div id="taskIdleCauseChart" class="task-idle-cause-chart empty-state">Waiting for DWS task data</div></article></div>
-          <div class="two-column-grid task-analysis-grid"><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">CALLING BOX</span><h3 id="taskCallingBoxTrendTitle">Calling Box Trend by 15 Minutes</h3><p id="taskCallingBoxTrendSubtitle">Call count by adaptive time bucket. Series are the top Calling Boxes in the selected period.</p></div></header><div id="taskCallingBoxTrendChart" class="chart-host"></div></article><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">ASSIGNED TASKS</span><h3 id="taskAssignedTrendTitle">Assigned Task Trend by 15 Minutes</h3><p id="taskAssignedTrendSubtitle">Assignment count by adaptive time bucket. Series are the top assigned tasks in the selected period.</p></div></header><div id="taskAssignedTrendChart" class="chart-host"></div></article></div>
-          <div class="two-column-grid task-analysis-grid task-ranking-grid"><article class="panel"><header class="panel-header"><div><span class="panel-kicker">CALLING BOX</span><h3 id="taskCallingBoxTitle">Top 5 Calling Boxes</h3><p>All Calling Box-linked queues in complete DWS hours within the selected period.</p></div></header><div id="taskCallingBoxList" class="task-ranking-list empty-state">Waiting for Calling Box data</div></article><article class="panel"><header class="panel-header"><div><span class="panel-kicker">ASSIGNED TASKS</span><h3 id="taskAssignedTitle">Top 5 Assigned Tasks</h3><p>Assignment count in complete DWS hours; completed count shown for context.</p></div></header><div id="taskAssignedList" class="task-ranking-list empty-state">Waiting for assigned task data</div></article></div>
-          <div class="legacy-task-layout">
-          <div class="focus-strip four-column"><div><span>Task Success Rate</span><strong id="taskSuccessValue">--</strong><small>Completed / (completed + unsuccessful)</small></div><div><span>Recorded Failures</span><strong id="taskFailureValue">--</strong><small id="taskFailureSummary">Queue outcome status</small></div><div><span>Active Jobs</span><strong id="taskActiveValue">--</strong><small id="taskActiveIds">IDs: --</small></div><div><span>Root-Cause Field</span><strong class="compact-value">Not Available</strong><small>The source records outcome status only</small></div></div>
-          <div class="two-column-grid">
-            <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">TASK VOLUME</span><h3>Task Volume Trend</h3><p>Completed and failed counts remain available in the export</p></div><button class="download-button compact" type="button" data-export="job-trend">Download CSV</button></header><div id="jobChart" class="chart-host"></div></article>
-            <article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">QUEUE</span><h3>Queue Volume Trend</h3><p>The export includes completed, failed and average duration</p></div><button class="download-button compact" type="button" data-export="queue-trend">Download CSV</button></header><div id="queueChart" class="chart-host"></div></article>
-          </div>
-          <article class="panel actionable-panel task-failure-panel"><header class="panel-header"><div><span class="panel-kicker">FAILURE FOLLOW-UP</span><h3>Recorded Failure Outcomes</h3><p>Shows terminal queue outcomes and affected robots. The source does not contain the underlying root cause.</p></div><button class="download-button compact" type="button" data-export="task-failure-outcomes">Download CSV</button></header><div class="table-scroll"><table class="failure-outcome-table"><thead><tr><th>Recorded Outcome</th><th>Failed Tasks</th><th>Affected Robots</th><th>Robot IDs</th><th>Latest Failure</th></tr></thead><tbody id="taskFailureBody"><tr><td colspan="5" class="empty-cell">Waiting for data</td></tr></tbody></table></div></article>
-          <article class="panel"><header class="panel-header"><div><span class="panel-kicker">CURRENT TASK</span><h3>Current Task Availability</h3><p>Current task ID and state are not stored in DWS daily aggregates</p></div></header><div class="table-scroll"><table class="compact-table task-status-table"><thead><tr><th>Robot ID</th><th>Task / Position</th><th>Status</th><th>Mode</th></tr></thead><tbody id="taskTableBody"><tr><td colspan="4" class="empty-cell">Waiting for data</td></tr></tbody></table></div></article>
-          </div>
-        </section>
-
         <section class="view-panel" data-view-panel="energy" aria-labelledby="energyHeading">
           <div class="section-intro"><div><span class="section-kicker">ENERGY</span><h2 id="energyHeading">Energy Analytics</h2><p>Identify the exact robots at low-battery risk and review the fleet-level trend.</p></div></div>
           <div class="focus-strip"><div><span>Average Battery</span><strong id="energyAverageValue">--</strong><small>Freshness-gated DWS hourly average</small></div><div><span>Low Battery ≤20%</span><strong id="energyLowBatteryValue">--</strong><small id="energyLowBatteryIds">IDs: --</small></div><div><span>Trend Through</span><strong id="batteryTrendAnchor">--</strong><small>DWS hourly rollup</small></div></div>
@@ -427,6 +404,12 @@
             <article><span>DWS Refresh Time</span><strong id="dwsFreshness">--</strong><small>Latest successful load time</small></article>
             <article><span>WiFi Data Time</span><strong id="wifiFreshness">--</strong><small>Latest WiFi detail data</small></article>
           </div>
+          <article class="panel task-state-quality-panel">
+            <header class="panel-header"><div><span class="panel-kicker">TASK STATE COVERAGE</span><h3>Task State Data Exception</h3><p>On-demand DWS evidence for missing execution, charging, waiting and no-task state coverage.</p></div><button id="dataQualityTaskStateRefresh" class="download-button compact" type="button">Refresh Evidence</button></header>
+            <article id="dataQualityTaskStateScope" class="task-data-scope" data-tone="neutral">Open Data Quality to load task-state coverage evidence for the current analysis window.</article>
+            <div class="focus-strip task-summary-strip task-state-quality-strip"><div><span>Full Exceptions</span><strong id="dataQualityTaskStateValue">--</strong><small id="dataQualityTaskStateDetail">Robot-hours with no state evidence</small></div><div><span>Partial Coverage Gaps</span><strong id="dataQualityTaskGapValue">--</strong><small id="dataQualityTaskGapDetail">Missing duration in otherwise evidenced robot-hours</small></div></div>
+            <details id="dataQualityTaskStateExceptionPanel" class="task-state-exception-panel" hidden><summary><span>Task state coverage evidence</span><small id="dataQualityTaskStateExceptionSummary">Latest affected robot-hours</small></summary><div class="table-scroll"><table class="task-state-exception-table"><thead><tr><th>Robot</th><th>Hour</th><th>Coverage finding</th><th>Battery / task evidence</th><th>Last battery event before hour</th></tr></thead><tbody id="dataQualityTaskStateExceptionBody"><tr><td colspan="5" class="empty-cell">Waiting for DWS state-coverage evidence</td></tr></tbody></table></div></details>
+          </article>
           <article class="panel table-panel"><header class="panel-header"><div><span class="panel-kicker">LOAD BATCHES</span><h3>Recent DWS Load Batches</h3><p>Use these batches to confirm whether the dashboard is current</p></div></header><div class="table-scroll"><table class="batch-status-table"><thead><tr><th>Batch ID</th><th>Start Time</th><th>End Time</th><th>Status</th><th>Error Message</th></tr></thead><tbody id="batchTableBody"><tr><td colspan="5" class="empty-cell">Waiting for data</td></tr></tbody></table></div></article>
         </section>
       </main>
@@ -434,13 +417,13 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="/js/app-core.js?v=20260810-adaptive-trends-r2" defer></script>
-  <script src="/js/task-page.js?v=20260810-adaptive-trends-r2" defer></script>
-  <script src="/js/project-page.js?v=20260810-adaptive-trends-r2" defer></script>
-  <script src="/js/robot-profile-page.js?v=20260810-adaptive-trends-r2" defer></script>
-  <script src="/js/fleet-page.js?v=20260810-adaptive-trends-r2" defer></script>
-  <script src="/js/wifi-page.js?v=20260810-adaptive-trends-r2" defer></script>
-  <script src="/js/exports.js?v=20260810-adaptive-trends-r2" defer></script>
-  <script src="/js/app-bootstrap.js?v=20260810-adaptive-trends-r2" defer></script>
+  <script src="/js/app-core.js?v=20260810-task-page-removal-r1" defer></script>
+  <script src="/js/task-page.js?v=20260810-task-page-removal-r1" defer></script>
+  <script src="/js/project-page.js?v=20260810-task-page-removal-r1" defer></script>
+  <script src="/js/robot-profile-page.js?v=20260810-task-page-removal-r1" defer></script>
+  <script src="/js/fleet-page.js?v=20260810-task-page-removal-r1" defer></script>
+  <script src="/js/wifi-page.js?v=20260810-task-page-removal-r1" defer></script>
+  <script src="/js/exports.js?v=20260810-task-page-removal-r1" defer></script>
+  <script src="/js/app-bootstrap.js?v=20260810-task-page-removal-r1" defer></script>
 </body>
 </html>

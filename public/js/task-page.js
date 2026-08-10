@@ -36,6 +36,132 @@ function taskTrendGrain(data = {}) {
   };
 }
 
+/*
+  The standalone Task Analytics view was intentionally retired. This focused,
+  on-demand reader retains the approved DWS state-coverage evidence in Data
+  Quality without making task analytics part of the dashboard's default load.
+*/
+function invalidateTaskStateQuality() {
+  state.taskStateQuality = null;
+}
+
+async function loadTaskStateQuality({ announce = false, force = false } = {}) {
+  if (state.taskStateQualityLoading && !force) return;
+  if (state.taskStateQuality && !force) {
+    renderDataQualityTaskState(state.taskStateQuality);
+    return;
+  }
+
+  const requestId = ++state.taskStateQualityRequestId;
+  const analysisWindow = selectedAnalysisWindow();
+  const params = new URLSearchParams();
+  if (analysisWindow.start || analysisWindow.end) {
+    if (!analysisWindow.start || !analysisWindow.end) {
+      const message = 'Choose both analysis start and end times before loading task-state coverage.';
+      renderDataQualityTaskStateError(message);
+      if (announce) showToast(message, 'error');
+      return;
+    }
+    params.set('start', analysisWindow.start);
+    params.set('end', analysisWindow.end);
+  }
+
+  state.taskStateQualityLoading = true;
+  if (elements.dataQualityTaskStateRefresh) elements.dataQualityTaskStateRefresh.disabled = true;
+  if (elements.dataQualityTaskStateScope) {
+    elements.dataQualityTaskStateScope.dataset.tone = 'neutral';
+    elements.dataQualityTaskStateScope.textContent = 'Loading DWS task-state coverage evidence for the current analysis window…';
+  }
+
+  try {
+    const data = await requestJson(`/api/task-analytics${params.toString() ? `?${params}` : ''}`);
+    if (requestId !== state.taskStateQualityRequestId) return;
+    state.taskStateQuality = data;
+    renderDataQualityTaskState(data);
+    if (announce) showToast('Task-state coverage evidence refreshed');
+  } catch (error) {
+    if (requestId !== state.taskStateQualityRequestId) return;
+    renderDataQualityTaskStateError(error.message);
+    if (announce) showToast(error.message, 'error');
+  } finally {
+    if (requestId === state.taskStateQualityRequestId) {
+      state.taskStateQualityLoading = false;
+      if (elements.dataQualityTaskStateRefresh) elements.dataQualityTaskStateRefresh.disabled = false;
+    }
+  }
+}
+
+function renderDataQualityTaskStateError(message) {
+  if (elements.dataQualityTaskStateScope) {
+    elements.dataQualityTaskStateScope.dataset.tone = 'critical';
+    elements.dataQualityTaskStateScope.textContent = message;
+  }
+  if (elements.dataQualityTaskStateValue) elements.dataQualityTaskStateValue.textContent = '--';
+  if (elements.dataQualityTaskGapValue) elements.dataQualityTaskGapValue.textContent = '--';
+  if (elements.dataQualityTaskStateExceptionPanel) elements.dataQualityTaskStateExceptionPanel.hidden = true;
+}
+
+function renderDataQualityTaskState(data) {
+  const summary = data.summary || {};
+  const dataExceptionSeconds = asNumber(summary.data_unavailable_seconds);
+  const dataGapRobotHours = asNumber(summary.data_gap_robot_hour_count);
+  const dataExceptionRobotHours = asNumber(summary.data_exception_robot_hour_count);
+  const dataExceptionRobots = asNumber(summary.data_exception_robot_count);
+  const stateSeconds = asNumber(summary.executing_seconds)
+    + asNumber(summary.no_task_seconds)
+    + asNumber(summary.waiting_seconds)
+    + asNumber(summary.charging_seconds)
+    + dataExceptionSeconds;
+  const unavailablePercent = stateSeconds > 0 ? (100 * dataExceptionSeconds / stateSeconds) : 0;
+  const partialGapRobotHours = Math.max(0, dataGapRobotHours - dataExceptionRobotHours);
+
+  if (elements.dataQualityTaskStateScope) {
+    elements.dataQualityTaskStateScope.dataset.tone = dataExceptionRobotHours > 0 ? 'critical' : (dataExceptionSeconds > 0 ? 'warning' : 'ok');
+    elements.dataQualityTaskStateScope.textContent = dataExceptionRobotHours > 0
+      ? `Task window ${taskWindowLabel(summary)}. ${formatNumber(dataExceptionRobotHours)} full state-coverage exceptions across ${formatNumber(dataExceptionRobots)} robots: no execution, charging, waiting, or no-task evidence was recorded.`
+      : dataExceptionSeconds > 0
+        ? `Task window ${taskWindowLabel(summary)}. ${formatSeconds(dataExceptionSeconds)} is missing from ${formatNumber(partialGapRobotHours)} otherwise evidenced robot-hours.`
+        : `DWS task-state coverage is complete for ${formatNumber(summary.robot_count)} robots in ${taskWindowLabel(summary)}.`;
+  }
+  if (elements.dataQualityTaskStateValue) elements.dataQualityTaskStateValue.textContent = dataExceptionRobotHours > 0 ? formatNumber(dataExceptionRobotHours) : 'None';
+  if (elements.dataQualityTaskStateDetail) elements.dataQualityTaskStateDetail.textContent = dataExceptionRobotHours > 0
+    ? `${formatNumber(dataExceptionRobots)} robots fully missing state evidence`
+    : 'No robot-hour is fully missing state evidence';
+  if (elements.dataQualityTaskGapValue) elements.dataQualityTaskGapValue.textContent = partialGapRobotHours > 0 ? formatNumber(partialGapRobotHours) : 'None';
+  if (elements.dataQualityTaskGapDetail) elements.dataQualityTaskGapDetail.textContent = dataExceptionSeconds > 0
+    ? `${formatSeconds(dataExceptionSeconds)} missing / ${formatPercent(unavailablePercent)} excluded`
+    : 'No partial state-coverage gap';
+  renderDataQualityTaskStateExceptionDetails(data.stateExceptionDetails || [], dataGapRobotHours);
+}
+
+function renderDataQualityTaskStateExceptionDetails(rows = [], totalAffectedRobotHours = 0) {
+  const panel = elements.dataQualityTaskStateExceptionPanel;
+  const body = elements.dataQualityTaskStateExceptionBody;
+  const summary = elements.dataQualityTaskStateExceptionSummary;
+  if (!panel || !body || !summary) return;
+
+  panel.hidden = rows.length === 0;
+  body.replaceChildren();
+  if (!rows.length) return;
+
+  summary.textContent = `Latest ${formatNumber(rows.length)} of ${formatNumber(totalAffectedRobotHours)} affected robot-hours`;
+  rows.forEach((row) => {
+    const tr = document.createElement('tr');
+    const robot = document.createElement('td');
+    robot.textContent = row.robot_code || '--';
+    const hour = document.createElement('td');
+    hour.textContent = formatTaskLocalDateTime(row.stat_hour);
+    const finding = document.createElement('td');
+    finding.textContent = `${taskExceptionFinding(row.exception_type)} (${formatSeconds(row.data_unavailable_seconds)})`;
+    const evidence = document.createElement('td');
+    evidence.textContent = `Battery ${formatNumber(row.battery_event_count)} / task ${formatNumber(row.task_event_count)}`;
+    const priorBattery = document.createElement('td');
+    priorBattery.textContent = formatTaskLocalDateTime(row.last_battery_event_time_before_hour);
+    tr.append(robot, hour, finding, evidence, priorBattery);
+    body.append(tr);
+  });
+}
+
 async function loadTaskAnalytics({ announce = false } = {}) {
   const requestId = ++state.taskRequestId;
   const analysisWindow = selectedAnalysisWindow();
