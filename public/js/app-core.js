@@ -34,7 +34,7 @@ const state = {
   projectAnalytics: null,
   selectedProjectIds: [],
   selectedJobIds: [],
-  selectedRobotCodes: [],
+  selectedProjectRobotCodes: [],
   projectRequestId: 0
 };
 

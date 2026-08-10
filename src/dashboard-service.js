@@ -331,19 +331,11 @@ function normalizeOptionalIdList(value) {
   return ids;
 }
 
-function normalizeRobotCodeList(value) {
-  if (value === undefined || value === null || value === '') return [];
-  const parts = Array.isArray(value) ? value : String(value).split(',');
-  return parts
-    .map((part) => String(part).trim())
-    .filter(Boolean);
-}
-
 /*
-  Project and task first. The robot is a breakdown of the selected scope here,
-  not the key the caller browses by.
+  Executive navigation is strictly project -> task -> robot. Only project and
+  task are accepted as filters; robots are derived from the selected work.
 */
-async function loadProjectAnalytics({ start, end, projectId, jobId, projectIds, jobIds, robotCodes } = {}) {
+async function loadProjectAnalytics({ start, end, projectId, jobId, projectIds, jobIds } = {}) {
   const pool = await getPool();
   const request = pool.request();
   request.multiple = true;
@@ -351,7 +343,6 @@ async function loadProjectAnalytics({ start, end, projectId, jobId, projectIds, 
   request.input('analysis_end_text', sql.NVarChar(23), String(end || '').trim() || null);
   request.input('project_ids_text_param', sql.NVarChar(sql.MAX), normalizeOptionalIdList(projectIds ?? projectId).join(',') || null);
   request.input('job_ids_text_param', sql.NVarChar(sql.MAX), normalizeOptionalIdList(jobIds ?? jobId).join(',') || null);
-  request.input('robot_codes_text_param', sql.NVarChar(sql.MAX), normalizeRobotCodeList(robotCodes).join(',') || null);
 
   const result = await request.query(projectAnalyticsQuery);
   const sets = result.recordsets || [];
@@ -360,6 +351,11 @@ async function loadProjectAnalytics({ start, end, projectId, jobId, projectIds, 
     generatedAt: new Date().toISOString(),
     dataSource: 'DWD.fact_amr_queue joined to dbo.MA_AMR_Project, DWD.dim_amr_task and dbo.MA_AMR',
     identityRule: 'Robot identity resolves through DWD.fact_amr_queue.robot_id = dbo.MA_AMR.id; robot_code is never used for display.',
+    navigationModel: {
+      filters: ['project', 'task'],
+      derivedBreakdown: 'robot',
+      drilldown: 'robot-profile'
+    },
     metricAvailability: {
       executionSeconds: 'AVAILABLE: summed from closed ODS.TA_AMR subjob runs linked by queue_id. DWD.fact_amr_queue.duration_seconds is NULL in the source and is not used.',
       queueOutcome: 'AVAILABLE: DWD.fact_amr_queue.queue_status records the outcome only; the source has no root-cause field.',
@@ -372,7 +368,7 @@ async function loadProjectAnalytics({ start, end, projectId, jobId, projectIds, 
     hourlyTrend: sets[4] || [],
     outcomes: sets[5] || [],
     recentQueues: sets[6] || [],
-    idleCauses: sets[7]?.[0] || {}
+    idleCausesByRobot: sets[7] || []
   };
 }
 

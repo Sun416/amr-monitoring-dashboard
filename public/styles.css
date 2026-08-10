@@ -873,6 +873,8 @@ td small { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1
 /* Project and task view: project -> task -> robot drill-down. */
 .project-filter-bar { margin: 0 0 20px; justify-content: flex-start; }
 .project-filter-bar .download-button { margin-left: auto; }
+.project-filter-guidance { color: var(--muted); font-size: .82rem; line-height: 1.35; max-width: 360px; }
+.derived-robot-filter .multi-select-caption::after { content: 'derived'; margin-left: 6px; color: var(--cyan); font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; }
 .project-table { min-width: 900px; }
 .project-task-table { min-width: 1020px; }
 .project-robot-table { min-width: 620px; }

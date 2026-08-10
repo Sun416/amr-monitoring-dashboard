@@ -63,10 +63,10 @@ bindMultiSelectToggle(elements.analysisProjectToggle, elements.analysisProjectMe
 bindMultiSelectToggle(elements.analysisTaskToggle, elements.analysisTaskMenu);
 bindMultiSelectToggle(elements.analysisRobotToggle, elements.analysisRobotMenu);
 if (elements.projectClearFilter) {
-  elements.projectClearFilter.addEventListener('click', () => setProjectScope({ projectIds: [], jobIds: [], robotCodes: [] }));
+  elements.projectClearFilter.addEventListener('click', () => setProjectScope({ projectIds: [], jobIds: [] }));
 }
 if (elements.analysisClearFilter) {
-  elements.analysisClearFilter.addEventListener('click', () => setProjectScope({ projectIds: [], jobIds: [], robotCodes: [] }));
+  elements.analysisClearFilter.addEventListener('click', () => setProjectScope({ projectIds: [], jobIds: [] }));
 }
 elements.taskRobotToggle.addEventListener('click', () => {
   const opening = elements.taskRobotMenu.hidden;

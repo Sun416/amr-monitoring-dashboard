@@ -10,7 +10,6 @@ async function loadProjectAnalytics({ announce = false } = {}) {
   }
   if (state.selectedProjectIds.length) params.set('projects', state.selectedProjectIds.join(','));
   if (state.selectedJobIds.length) params.set('jobs', state.selectedJobIds.join(','));
-  if (state.selectedRobotCodes.length) params.set('robots', state.selectedRobotCodes.join(','));
 
   if (elements.projectDataScope) elements.projectDataScope.textContent = 'Loading project and task data…';
   try {
@@ -29,12 +28,17 @@ async function loadProjectAnalytics({ announce = false } = {}) {
   }
 }
 
-function setProjectScope({ projectIds = [], jobIds = [], robotCodes = [] } = {}) {
+function setProjectScope({ projectIds = [], jobIds = [] } = {}) {
   state.selectedProjectIds = projectIds.map(String);
   state.selectedJobIds = jobIds.map(String);
-  state.selectedRobotCodes = robotCodes.map(String);
+  state.selectedProjectRobotCodes = [];
   if (state.projectAnalytics) populateProjectSelectors(state.projectAnalytics);
   loadProjectAnalytics();
+}
+
+function setProjectRobotDisplayScope(robotCodes = []) {
+  state.selectedProjectRobotCodes = robotCodes.map(String);
+  if (state.projectAnalytics) renderProjectAnalytics(state.projectAnalytics);
 }
 
 function projectMultiLabel(values, allLabel) {
@@ -108,11 +112,12 @@ function populateProjectSelectors(data) {
       label: `${row.robot_name || 'Unmapped robot'} · ${formatNumber(row.queue_count)} records`
     }))
     .filter((row) => row.value !== '');
-
+  const availableRobots = new Set(robots.map((row) => row.value));
+  state.selectedProjectRobotCodes = state.selectedProjectRobotCodes
+    .filter((robotCode) => availableRobots.has(robotCode));
   const projectScope = {
     projectIds: state.selectedProjectIds,
-    jobIds: state.selectedJobIds,
-    robotCodes: state.selectedRobotCodes
+    jobIds: state.selectedJobIds
   };
 
   renderProjectMultiMenu(
@@ -120,7 +125,7 @@ function populateProjectSelectors(data) {
     elements.projectToggleText,
     projects,
     state.selectedProjectIds,
-    (values) => setProjectScope({ ...projectScope, projectIds: values }),
+    (values) => setProjectScope({ projectIds: values, jobIds: [] }),
     `All projects (${projects.length})`
   );
   renderProjectMultiMenu(
@@ -128,7 +133,7 @@ function populateProjectSelectors(data) {
     elements.analysisProjectToggleText,
     projects,
     state.selectedProjectIds,
-    (values) => setProjectScope({ ...projectScope, projectIds: values }),
+    (values) => setProjectScope({ projectIds: values, jobIds: [] }),
     `All projects (${projects.length})`
   );
   renderProjectMultiMenu(
@@ -151,18 +156,41 @@ function populateProjectSelectors(data) {
     elements.robotMenu,
     elements.robotToggleText,
     robots,
-    state.selectedRobotCodes,
-    (values) => setProjectScope({ ...projectScope, robotCodes: values }),
-    `All robots (${robots.length})`
+    state.selectedProjectRobotCodes,
+    setProjectRobotDisplayScope,
+    `All derived robots (${robots.length})`
   );
   renderProjectMultiMenu(
     elements.analysisRobotMenu,
     elements.analysisRobotToggleText,
     robots,
-    state.selectedRobotCodes,
-    (values) => setProjectScope({ ...projectScope, robotCodes: values }),
-    `All robots (${robots.length})`
+    state.selectedProjectRobotCodes,
+    setProjectRobotDisplayScope,
+    `All derived robots (${robots.length})`
   );
+}
+
+function projectDisplayRobotRows(rows = [], key = 'robot_name') {
+  if (!state.selectedProjectRobotCodes.length) return rows;
+  const selected = new Set(state.selectedProjectRobotCodes);
+  return rows.filter((row) => selected.has(String(row[key] || '').trim()));
+}
+
+function projectDisplayIdleCauses(rows = []) {
+  const scopedRows = projectDisplayRobotRows(rows, 'robot_name');
+  return scopedRows.reduce((total, row) => ({
+    no_task_seconds: total.no_task_seconds + asNumber(row.no_task_seconds),
+    waiting_seconds: total.waiting_seconds + asNumber(row.waiting_seconds),
+    charging_seconds: total.charging_seconds + asNumber(row.charging_seconds),
+    executing_seconds: total.executing_seconds + asNumber(row.executing_seconds),
+    robot_count: total.robot_count + 1
+  }), {
+    no_task_seconds: 0,
+    waiting_seconds: 0,
+    charging_seconds: 0,
+    executing_seconds: 0,
+    robot_count: 0
+  });
 }
 
 function projectEmptyRow(host, columnCount, message) {
@@ -228,8 +256,7 @@ function renderProjectList(rows = []) {
             else next.add(projectId);
             setProjectScope({
               projectIds: [...next],
-              jobIds: state.selectedJobIds,
-              robotCodes: state.selectedRobotCodes
+              jobIds: []
             });
           }
       }
@@ -276,8 +303,7 @@ function renderProjectTasks(rows = []) {
             if (rowProjectId !== null && !nextProjects.size) nextProjects.add(rowProjectId);
             setProjectScope({
               projectIds: [...nextProjects],
-              jobIds: [...nextJobs],
-              robotCodes: state.selectedRobotCodes
+              jobIds: [...nextJobs]
             });
           }
       }
@@ -294,16 +320,24 @@ function renderProjectRobots(rows = []) {
     return;
   }
   rows.forEach((row) => {
-    host.append(projectTableRow([
-      row.robot_name,
-      formatNumber(row.queue_count),
-      formatNumber(row.task_count),
-      formatNumber(row.completed_count),
-      formatNumber(row.unsuccessful_count),
-      row.average_execution_seconds === null || row.average_execution_seconds === undefined
-        ? 'Not available'
-        : formatSeconds(row.average_execution_seconds)
-    ]));
+    const robotId = row.robot_master_id === null || row.robot_master_id === undefined
+      ? null
+      : String(row.robot_master_id);
+    host.append(projectTableRow(
+      [
+        row.robot_name,
+        formatNumber(row.queue_count),
+        formatNumber(row.task_count),
+        formatNumber(row.completed_count),
+        formatNumber(row.unsuccessful_count),
+        row.average_execution_seconds === null || row.average_execution_seconds === undefined
+          ? 'Not available'
+          : formatSeconds(row.average_execution_seconds)
+      ],
+      {
+        onActivate: robotId === null ? null : () => selectRobotProfile(robotId)
+      }
+    ));
   });
 }
 
@@ -407,30 +441,30 @@ function renderProjectAnalytics(data) {
     : state.selectedJobIds.length > 1
       ? `${state.selectedJobIds.length} tasks`
       : 'All tasks';
-  const robotLabel = state.selectedRobotCodes.length === 1
-    ? state.selectedRobotCodes[0]
-    : state.selectedRobotCodes.length > 1
-      ? `${state.selectedRobotCodes.length} robots`
-      : 'All robots';
-
-  if (elements.projectDataScope) {
-    elements.projectDataScope.dataset.tone = 'neutral';
-    elements.projectDataScope.textContent = `${projectLabel} / ${taskLabel} / ${robotLabel} · ${formatTaskLocalDateTime(summary.analysis_start)} to ${formatTaskLocalDateTime(summary.analysis_end)} · ${formatNumber(summary.queue_count)} records · ${formatNumber(summary.robot_count)} robots`;
-  }
-
+  const allRobotRows = data.robots || [];
+  const robotRows = projectDisplayRobotRows(allRobotRows);
+  const displayRobotLabel = state.selectedProjectRobotCodes.length === 1
+    ? state.selectedProjectRobotCodes[0]
+    : state.selectedProjectRobotCodes.length > 1
+      ? `${state.selectedProjectRobotCodes.length} robots displayed`
+      : 'All derived robots';
   /*
     The KPI strip describes the selected scope, not the whole window, so it is
     summed from the scoped robot breakdown rather than the window summary.
   */
-  const robotRows = data.robots || [];
   const scopedRecords = robotRows.reduce((sum, row) => sum + asNumber(row.queue_count), 0);
   const scopedCompleted = robotRows.reduce((sum, row) => sum + asNumber(row.completed_count), 0);
   const scopedUnsuccessful = robotRows.reduce((sum, row) => sum + asNumber(row.unsuccessful_count), 0);
   const scopedExecution = robotRows.reduce((sum, row) => sum + asNumber(row.execution_seconds), 0);
   const recordedOutcomes = scopedCompleted + scopedUnsuccessful;
 
+  if (elements.projectDataScope) {
+    elements.projectDataScope.dataset.tone = 'neutral';
+    elements.projectDataScope.textContent = `${projectLabel} / ${taskLabel} · ${formatTaskLocalDateTime(summary.analysis_start)} to ${formatTaskLocalDateTime(summary.analysis_end)} · query scope ${formatNumber(summary.queue_count)} records · display ${formatNumber(scopedRecords)} records from ${formatNumber(robotRows.length)} of ${formatNumber(allRobotRows.length)} derived robots`;
+  }
+
   if (elements.projectQueueValue) elements.projectQueueValue.textContent = formatNumber(scopedRecords);
-  if (elements.projectQueueDetail) elements.projectQueueDetail.textContent = `${projectLabel} / ${taskLabel}`;
+  if (elements.projectQueueDetail) elements.projectQueueDetail.textContent = `${projectLabel} / ${taskLabel} / ${displayRobotLabel}`;
   if (elements.projectCompletionValue) {
     elements.projectCompletionValue.textContent = recordedOutcomes > 0
       ? formatPercent((100 * scopedCompleted) / recordedOutcomes)
@@ -462,7 +496,7 @@ function renderProjectAnalytics(data) {
       : (state.selectedProjectIds.length ? `Robots in ${projectLabel}` : 'Robots in Scope');
   }
   if (elements.projectTrendSubtitle) {
-    elements.projectTrendSubtitle.textContent = `${projectLabel} / ${taskLabel} · queue records by hour, one series per robot.`;
+    elements.projectTrendSubtitle.textContent = `${projectLabel} / ${taskLabel} / ${displayRobotLabel} · queue records by hour.`;
   }
 
   renderProjectList(data.projects || []);
@@ -483,8 +517,8 @@ function renderProjectAnalytics(data) {
     value: asNumber(row.queue_count),
     detail: `${formatNumber(row.completed_count)} completed · ${formatNumber(row.unsuccessful_count)} unsuccessful${row.average_execution_seconds == null ? '' : ` · ${formatSeconds(row.average_execution_seconds)} avg`}`
   })), { emptyText: 'No robot carried this work in the selected scope' });
-  renderTaskIdleCauses(data.idleCauses || {}, elements.projectOutcomeChart);
-  renderTaskLabelTrend(elements.projectTrendChart, data.hourlyTrend || [], {
+  renderTaskIdleCauses(projectDisplayIdleCauses(data.idleCausesByRobot || []), elements.projectOutcomeChart);
+  renderTaskLabelTrend(elements.projectTrendChart, projectDisplayRobotRows(data.hourlyTrend || []), {
     labelKey: 'robot_name',
     valueKey: 'queue_count',
     secondaryKey: 'completed_count',
@@ -492,5 +526,5 @@ function renderProjectAnalytics(data) {
     ariaLabel: 'Task record trend by robot',
     emptyText: 'No hourly task records are available for the selected project and task.'
   });
-  renderProjectRecords(data.recentQueues || []);
+  renderProjectRecords(projectDisplayRobotRows(data.recentQueues || []));
 }

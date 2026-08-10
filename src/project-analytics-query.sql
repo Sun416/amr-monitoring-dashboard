@@ -1,8 +1,8 @@
 /*
   Project and Task Analytics API query.
 
-  Analysis axis: project -> task -> robot. The robot is a breakdown dimension
-  here, never the entry key. Identity always resolves through
+  Analysis axis: project -> task -> robot. Only project and task are request
+  filters; robot is a derived breakdown and drill-down dimension. Identity always resolves through
   DWD.fact_amr_queue.robot_id = dbo.MA_AMR.id, so a numeric robot_code left in
   DWD by an unreconciled batch cannot leak into the display name.
 
@@ -14,6 +14,7 @@
     4  hourly queue trend within the selected scope
     5  outcome breakdown (queue_status) within the selected scope
     6  recent queue records for evidence
+    7  idle-time causes by derived robot for local display filtering
 */
 SET NOCOUNT ON;
 
@@ -22,7 +23,6 @@ DECLARE @requested_end DATETIME2(0) = TRY_CONVERT(DATETIME2(0), REPLACE(@analysi
 DECLARE @anchor DATETIME2(0);
 DECLARE @project_ids_text NVARCHAR(MAX) = NULLIF(LTRIM(RTRIM(@project_ids_text_param)), N'');
 DECLARE @job_ids_text NVARCHAR(MAX) = NULLIF(LTRIM(RTRIM(@job_ids_text_param)), N'');
-DECLARE @robot_codes_text NVARCHAR(MAX) = NULLIF(LTRIM(RTRIM(@robot_codes_text_param)), N'');
 
 DECLARE @selected_projects TABLE
 (
@@ -32,11 +32,6 @@ DECLARE @selected_projects TABLE
 DECLARE @selected_jobs TABLE
 (
     job_id INT NOT NULL PRIMARY KEY
-);
-
-DECLARE @selected_robots TABLE
-(
-    robot_code NVARCHAR(100) NOT NULL PRIMARY KEY
 );
 
 DECLARE @projects_xml XML = TRY_CONVERT(XML,
@@ -53,13 +48,6 @@ DECLARE @jobs_xml XML = TRY_CONVERT(XML,
     END
 );
 
-DECLARE @robots_xml XML = TRY_CONVERT(XML,
-    CASE
-        WHEN @robot_codes_text IS NULL THEN N'<items />'
-        ELSE N'<items><item>' + REPLACE(@robot_codes_text, N',', N'</item><item>') + N'</item></items>'
-    END
-);
-
 INSERT INTO @selected_projects (project_id)
 SELECT DISTINCT TRY_CONVERT(INT, LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)'))))
 FROM @projects_xml.nodes(N'/items/item') AS items(split)
@@ -69,11 +57,6 @@ INSERT INTO @selected_jobs (job_id)
 SELECT DISTINCT TRY_CONVERT(INT, LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)'))))
 FROM @jobs_xml.nodes(N'/items/item') AS items(split)
 WHERE TRY_CONVERT(INT, LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)')))) IS NOT NULL;
-
-INSERT INTO @selected_robots (robot_code)
-SELECT DISTINCT LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)')))
-FROM @robots_xml.nodes(N'/items/item') AS items(split)
-WHERE LTRIM(RTRIM(split.value(N'.', N'NVARCHAR(100)'))) <> N'';
 
 SELECT @anchor = DATEADD(HOUR, 1, MAX(queue_fact.[stat_hour]))
 FROM [DWS].[dws_robot_task_hourly] AS queue_fact;
@@ -207,7 +190,6 @@ SELECT
     CONVERT(NVARCHAR(19), @anchor, 120) AS [source_anchor],
     (SELECT COUNT(1) FROM @selected_projects) AS [selected_project_count],
     (SELECT COUNT(1) FROM @selected_jobs) AS [selected_job_count],
-    (SELECT COUNT(1) FROM @selected_robots) AS [selected_robot_count],
     COUNT_BIG(1) AS [queue_count],
     COUNT(DISTINCT scoped.[project_id]) AS [project_count],
     COUNT(DISTINCT scoped.[job_id]) AS [task_count],
@@ -217,7 +199,17 @@ SELECT
     SUM(CASE WHEN scoped.[queue_status] IN (N'in_progress', N'pending') THEN 1 ELSE 0 END) AS [open_count],
     SUM(scoped.[execution_seconds]) AS [execution_seconds],
     CONVERT(NVARCHAR(19), MAX(scoped.[event_time]), 120) AS [latest_event_time]
-FROM @scoped_queue AS scoped;
+FROM @scoped_queue AS scoped
+WHERE
+(
+    NOT EXISTS (SELECT 1 FROM @selected_projects)
+    OR EXISTS (SELECT 1 FROM @selected_projects AS selected_project WHERE selected_project.[project_id] = scoped.[project_id])
+)
+AND
+(
+    NOT EXISTS (SELECT 1 FROM @selected_jobs)
+    OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
+);
 
 /* 1: project list. Always the full window, so the picker never hides a project. */
 SELECT
@@ -290,11 +282,6 @@ AND
     NOT EXISTS (SELECT 1 FROM @selected_jobs)
     OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
 )
-AND
-(
-    NOT EXISTS (SELECT 1 FROM @selected_robots)
-    OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
-)
 GROUP BY scoped.[robot_master_id], scoped.[robot_name]
 ORDER BY [queue_count] DESC, [robot_name];
 
@@ -317,11 +304,6 @@ AND
     NOT EXISTS (SELECT 1 FROM @selected_jobs)
     OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
 )
-AND
-(
-    NOT EXISTS (SELECT 1 FROM @selected_robots)
-    OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
-)
 GROUP BY scoped.[stat_hour], scoped.[robot_name]
 ORDER BY [stat_hour], [robot_name];
 
@@ -342,11 +324,6 @@ AND
 (
     NOT EXISTS (SELECT 1 FROM @selected_jobs)
     OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
-)
-AND
-(
-    NOT EXISTS (SELECT 1 FROM @selected_robots)
-    OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
 )
 GROUP BY scoped.[queue_status]
 ORDER BY [queue_count] DESC;
@@ -374,11 +351,6 @@ AND
     NOT EXISTS (SELECT 1 FROM @selected_jobs)
     OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
 )
-AND
-(
-    NOT EXISTS (SELECT 1 FROM @selected_robots)
-    OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
-)
 ORDER BY scoped.[event_time] DESC;
 
 /*
@@ -402,11 +374,11 @@ DECLARE @idle_start DATETIME2(0) = DATEADD
 DECLARE @idle_end DATETIME2(0) = DATEADD(HOUR, DATEDIFF(HOUR, 0, @requested_end), 0);
 
 SELECT
+    h.[robot_code] AS [robot_name],
     SUM(h.[no_task_seconds]) AS [no_task_seconds],
     SUM(h.[waiting_seconds]) AS [waiting_seconds],
     SUM(h.[charging_seconds]) AS [charging_seconds],
-    SUM(h.[executing_seconds]) AS [executing_seconds],
-    COUNT(DISTINCT h.[robot_code]) AS [robot_count]
+    SUM(h.[executing_seconds]) AS [executing_seconds]
 FROM [DWS].[dws_robot_task_hourly] AS h
 WHERE h.[stat_hour] >= @idle_start
   AND h.[stat_hour] < @idle_end
@@ -425,9 +397,6 @@ WHERE h.[stat_hour] >= @idle_start
             NOT EXISTS (SELECT 1 FROM @selected_jobs)
             OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
         )
-        AND
-        (
-            NOT EXISTS (SELECT 1 FROM @selected_robots)
-            OR EXISTS (SELECT 1 FROM @selected_robots AS selected_robot WHERE selected_robot.[robot_code] = scoped.[robot_name])
-        )
-  );
+  )
+GROUP BY h.[robot_code]
+ORDER BY h.[robot_code];

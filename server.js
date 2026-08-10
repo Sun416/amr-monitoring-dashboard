@@ -66,14 +66,19 @@ app.get('/api/task-analytics', async (request, response, next) => {
 
 app.get('/api/project-analytics', async (request, response, next) => {
   try {
+    if (request.query.robots !== undefined || request.query.robot !== undefined) {
+      const error = new Error('Robot is a derived result in Project Analytics. Filter by project and task, then use the returned robot breakdown.');
+      error.code = 'ROBOT_SCOPE_NOT_SUPPORTED';
+      error.statusCode = 400;
+      throw error;
+    }
     const projectAnalytics = await loadProjectAnalytics({
       start: request.query.start,
       end: request.query.end,
       projectId: request.query.projectId,
       jobId: request.query.jobId,
       projectIds: request.query.projects,
-      jobIds: request.query.jobs,
-      robotCodes: request.query.robots
+      jobIds: request.query.jobs
     });
     response.json(projectAnalytics);
   } catch (error) {

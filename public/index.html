@@ -108,12 +108,13 @@
               <button type="button" class="multi-select-toggle" id="analysisTaskToggle" aria-expanded="false" aria-haspopup="true" aria-label="Scope Analysis Center by task"><span id="analysisTaskToggleText">All tasks</span></button>
               <div class="multi-select-menu" id="analysisTaskMenu" role="group" aria-label="Analysis task options" hidden></div>
             </div>
-            <div class="multi-select project-multi-select">
-              <span class="multi-select-caption">Robots</span>
-              <button type="button" class="multi-select-toggle" id="analysisRobotToggle" aria-expanded="false" aria-haspopup="true" aria-label="Scope Analysis Center by robot"><span id="analysisRobotToggleText">All robots</span></button>
-              <div class="multi-select-menu" id="analysisRobotMenu" role="group" aria-label="Analysis robot options" hidden></div>
+            <div class="multi-select project-multi-select derived-robot-filter">
+              <span class="multi-select-caption">Robots (display)</span>
+              <button type="button" class="multi-select-toggle" id="analysisRobotToggle" aria-expanded="false" aria-haspopup="true" aria-label="Limit Analysis Center display to robots derived from the selected work"><span id="analysisRobotToggleText">All derived robots</span></button>
+              <div class="multi-select-menu" id="analysisRobotMenu" role="group" aria-label="Derived robot display options" hidden></div>
             </div>
             <button id="analysisClearFilter" class="button secondary compact-button" type="button">Clear</button>
+            <span class="project-filter-guidance">Project and task define the query. Robot only narrows the derived display.</span>
           </div>
 
           <article class="analysis-verdict compact-verdict" id="analysisVerdict" data-severity="INFO">
@@ -250,13 +251,14 @@
               <button type="button" class="multi-select-toggle" id="taskToggle" aria-expanded="false" aria-haspopup="true" aria-label="Filter tasks"><span id="taskToggleText">All tasks</span></button>
               <div class="multi-select-menu" id="taskMenu" role="group" aria-label="Task options" hidden></div>
             </div>
-            <div class="multi-select project-multi-select">
-              <span class="multi-select-caption">Robots</span>
-              <button type="button" class="multi-select-toggle" id="robotToggle" aria-expanded="false" aria-haspopup="true" aria-label="Filter robots"><span id="robotToggleText">All robots</span></button>
-              <div class="multi-select-menu" id="robotMenu" role="group" aria-label="Robot options" hidden></div>
+            <div class="multi-select project-multi-select derived-robot-filter">
+              <span class="multi-select-caption">Robots (display)</span>
+              <button type="button" class="multi-select-toggle" id="robotToggle" aria-expanded="false" aria-haspopup="true" aria-label="Limit charts to robots derived from the selected work"><span id="robotToggleText">All derived robots</span></button>
+              <div class="multi-select-menu" id="robotMenu" role="group" aria-label="Derived robot display options" hidden></div>
             </div>
             <button id="projectClearFilter" class="button secondary compact-button" type="button">Clear</button>
             <button class="download-button compact-button" type="button" data-export="project-analytics">Download CSV</button>
+            <span class="project-filter-guidance">Select project and task first. Robot selection changes charts and detail rows only.</span>
           </div>
 
           <article class="task-data-scope" id="projectDataScope" data-tone="neutral">Loading project and task data…</article>
@@ -297,7 +299,7 @@
               </details>
             </article>
             <article class="panel chart-panel">
-              <header class="panel-header"><div><span class="panel-kicker">ROBOTS</span><h3 id="projectRobotTitle">Records by Robot</h3></div></header>
+              <header class="panel-header"><div><span class="panel-kicker">ROBOTS DERIVED FROM WORK</span><h3 id="projectRobotTitle">Robots Carrying the Selected Work</h3><p>Click a robot row to open its profile after reviewing the project and task.</p></div></header>
               <div id="projectRobotChart" class="project-chart-bars empty-state">Waiting for robot breakdown</div>
               <details class="detail-collapse">
                 <summary>Robot table</summary>

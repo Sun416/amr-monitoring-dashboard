@@ -34,7 +34,9 @@ function buildExportRows(dataset) {
         Analysis_End: projectData.summary?.analysis_end,
         Selected_Projects: state.selectedProjectIds.join(',') || 'ALL',
         Selected_Jobs: state.selectedJobIds.join(',') || 'ALL',
-        Selected_Robots: state.selectedRobotCodes.join(',') || 'ALL',
+        Display_Robots: state.selectedProjectRobotCodes.join(',') || 'ALL_DERIVED',
+        Navigation_Axis: 'Project -> Task -> Robot',
+        Robot_Scope: 'DERIVED_FROM_SELECTED_WORK',
         Identity_Rule: projectData.identityRule
       }));
     }

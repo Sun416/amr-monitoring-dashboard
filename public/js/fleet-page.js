@@ -499,24 +499,28 @@ function renderAnalysisVisuals(analysis) {
 
   The dashboard is loaded fleet-wide, but the Analysis Center may be scoped to
   a project or task. Robot membership comes from the project analytics robot
-  breakdown, which resolves display names through dbo.MA_AMR. Telemetry
-  diagnostics are then filtered to exactly those master robot IDs.
+  breakdown, which resolves display names through dbo.MA_AMR. An optional
+  robot display selection can narrow those derived members without becoming a
+  backend project query condition. Telemetry diagnostics are then filtered to
+  exactly those master robot IDs.
 */
 function projectScopeRobotNames() {
   const rows = state.projectAnalytics?.robots || [];
-  return new Set(rows.map((row) => String(row.robot_name || '').trim()).filter(Boolean));
+  const derivedNames = rows.map((row) => String(row.robot_name || '').trim()).filter(Boolean);
+  if (!state.selectedProjectRobotCodes.length) return new Set(derivedNames);
+  const selected = new Set(state.selectedProjectRobotCodes);
+  return new Set(derivedNames.filter((name) => selected.has(name)));
 }
 
 function projectScopeActiveAny() {
   return state.selectedProjectIds.length > 0
     || state.selectedJobIds.length > 0
-    || state.selectedRobotCodes.length > 0;
+    || state.selectedProjectRobotCodes.length > 0;
 }
 
 function scopedAnalysisRobots(robots = []) {
   if (!projectScopeActiveAny()) return robots;
   const projectScope = state.selectedProjectIds.length > 0 || state.selectedJobIds.length > 0;
-  const robotSet = state.selectedRobotCodes.length ? new Set(state.selectedRobotCodes) : null;
   let filtered = robots;
   if (projectScope) {
     const names = projectScopeRobotNames();
@@ -524,12 +528,6 @@ function scopedAnalysisRobots(robots = []) {
     filtered = filtered.filter((robot) => (
       names.has(String(robot.robot_code || '').trim())
       || names.has(String(robot.robot_name || '').trim())
-    ));
-  }
-  if (robotSet) {
-    filtered = filtered.filter((robot) => (
-      robotSet.has(String(robot.robot_code || '').trim())
-      || robotSet.has(String(robot.robot_name || '').trim())
     ));
   }
   return filtered;
