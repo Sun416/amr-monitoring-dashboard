@@ -4,7 +4,6 @@ const path = require('node:path');
 const express = require('express');
 const { loadDashboard, loadTaskAnalytics, loadProjectAnalytics, loadRobotProfile, checkDatabase } = require('./src/dashboard-service');
 const { closePool, DatabaseConfigurationError, parseInteger } = require('./src/db');
-const { executeDwsRefresh } = require('./src/dws-refresh-service');
 
 try {
   if (typeof process.loadEnvFile === 'function') process.loadEnvFile(path.join(__dirname, '.env'));
@@ -102,13 +101,11 @@ app.post('/api/sync/current', async (request, response, next) => {
   });
 });
 
-app.post('/api/sync/dws', async (request, response, next) => {
-  try {
-    const refresh = await executeDwsRefresh();
-    response.json(refresh);
-  } catch (error) {
-    next(error);
-  }
+app.post('/api/sync/dws', (request, response) => {
+  response.status(410).json({
+    code: 'DWS_SYNC_EXTERNALIZED',
+    message: 'DWS synchronization is owned by the amr-data-warehouse operational workflow and cannot be triggered from the read-only dashboard.'
+  });
 });
 
 app.use(express.static(publicDirectory, { index: 'index.html' }));

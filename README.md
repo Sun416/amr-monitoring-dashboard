@@ -118,10 +118,12 @@ npm.cmd start
 - `GET /api/health`：检查数据库和非快照 DWS 小时汇总表。
 - `GET /api/dashboard?hours=24&days=7&robotType=ALL`：读取监控数据及透明规则分析结果。
 - `POST /api/sync/current`：已停用，固定返回 `410 SNAPSHOT_SYNC_DISABLED`，防止旧快照重新进入当前状态链路。
+- `POST /api/sync/dws`：已外部化，固定返回 `410 DWS_SYNC_EXTERNALIZED`；数据库刷新由独立的 `amr-data-warehouse` 运维流程负责。
 
 ## 安全边界
 
 - 默认只监听 `127.0.0.1`，适合本机使用。
 - 尚未实现登录认证，不要直接改成 `0.0.0.0` 暴露到工厂网络或互联网。
 - 正式部署前需要增加用户认证、HTTPS、请求审计和同步按钮权限控制。
+- Dashboard 进程不再读取或执行数据仓库 SQL 文件，也不提供数据库写入按钮。
 - 页面位置图是坐标归一化投影，不是实际地图比例，也不会伪造机器人规划路径。
