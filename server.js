@@ -23,7 +23,12 @@ app.use((request, response, next) => {
   response.setHeader('X-Content-Type-Options', 'nosniff');
   response.setHeader('X-Frame-Options', 'DENY');
   response.setHeader('Referrer-Policy', 'no-referrer');
-  response.setHeader('Cache-Control', request.path.startsWith('/api/') ? 'no-store' : 'no-cache');
+  /*
+    The dashboard is an operational UI. Never let an open internal browser
+    keep a prior JavaScript bundle after a server-side deployment; an old
+    project page may still send the retired robots= API parameter.
+  */
+  response.setHeader('Cache-Control', 'no-store');
   next();
 });
 

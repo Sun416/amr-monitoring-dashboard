@@ -32,6 +32,11 @@ test('project analytics never sends or parses a robot filter', () => {
   assert.equal(query.includes('@robot_codes_text'), false);
 });
 
+test('dashboard static files are not cached across a project-filter deployment', () => {
+  assert.match(server, /response\.setHeader\('Cache-Control', 'no-store'\)/);
+  assert.match(indexHtml, /project-page\.js\?v=20260810-adaptive-trends-r2/);
+});
+
 test('project selection clears task selection before reloading the hierarchy', () => {
   assert.match(projectPage, /setProjectScope\(\{ projectIds: values, jobIds: \[\] \}\)/);
   assert.match(projectPage, /projectIds: \[\.\.\.next\],\s+jobIds: \[\]/);
@@ -45,6 +50,14 @@ test('robots are a derived breakdown with a robot-profile drilldown', () => {
   assert.match(projectPage, /setProjectRobotDisplayScope/);
   assert.match(projectPage, /projectDisplayRobotRows/);
   assert.match(projectPage, /idleCausesByRobot/);
+});
+
+test('derived Robot display scope is applied to every Project Analytics result', () => {
+  assert.match(projectPage, /const robotRows = projectDisplayRobotRows\(allRobotRows\)/);
+  assert.match(projectPage, /renderProjectRobots\(robotRows\)/);
+  assert.match(projectPage, /projectDisplayIdleCauses\(data\.idleCausesByRobot \|\| \[\]\)/);
+  assert.match(projectPage, /projectDisplayRobotRows\(data\.hourlyTrend \|\| \[\]\)/);
+  assert.match(projectPage, /projectDisplayRobotRows\(data\.recentQueues \|\| \[\]\)/);
 });
 
 test('project API rejects the retired robot-first scope', () => {
