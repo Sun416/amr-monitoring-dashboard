@@ -424,6 +424,7 @@ function renderProjectRecords(rows = []) {
 
 function renderProjectAnalytics(data) {
   const summary = data.summary || {};
+  const trendGrain = data.trendGrain || { label: '15 Minutes', bucketLabel: '15-minute buckets' };
   populateProjectSelectors(data);
   if (state.dashboard) {
     renderAnalysis(state.dashboard.analysis, state.dashboard.analysisReadiness, state.dashboard.robots);
@@ -496,8 +497,9 @@ function renderProjectAnalytics(data) {
       : (state.selectedProjectIds.length ? `Robots in ${projectLabel}` : 'Robots in Scope');
   }
   if (elements.projectTrendSubtitle) {
-    elements.projectTrendSubtitle.textContent = `${projectLabel} / ${taskLabel} / ${displayRobotLabel} · queue records by hour.`;
+    elements.projectTrendSubtitle.textContent = `${projectLabel} / ${taskLabel} / ${displayRobotLabel} · queue records in ${trendGrain.bucketLabel}.`;
   }
+  if (elements.projectTrendTitle) elements.projectTrendTitle.textContent = `Task Records by ${trendGrain.label}`;
 
   renderProjectList(data.projects || []);
   renderAnalysisBarChart(elements.projectListChart, (data.projects || []).map((row) => ({
@@ -524,7 +526,7 @@ function renderProjectAnalytics(data) {
     secondaryKey: 'completed_count',
     unit: 'records',
     ariaLabel: 'Task record trend by robot',
-    emptyText: 'No hourly task records are available for the selected project and task.'
+    emptyText: `No task records are available in ${trendGrain.bucketLabel} for the selected project and task.`
   });
   renderProjectRecords(projectDisplayRobotRows(data.recentQueues || []));
 }

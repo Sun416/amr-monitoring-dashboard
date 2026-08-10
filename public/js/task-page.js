@@ -28,6 +28,14 @@ function taskWindowLabel(summary = {}) {
     : `${effectiveWindow} (complete hours)`;
 }
 
+function taskTrendGrain(data = {}) {
+  const grain = data.trendGrain || {};
+  return {
+    label: grain.label || '15 Minutes',
+    bucketLabel: grain.bucketLabel || '15-minute buckets'
+  };
+}
+
 async function loadTaskAnalytics({ announce = false } = {}) {
   const requestId = ++state.taskRequestId;
   const analysisWindow = selectedAnalysisWindow();
@@ -149,14 +157,14 @@ function renderTaskRanking(host, rows, valueKey, secondary) {
   });
 }
 
-function renderTaskUsageTrend(host, rows = [], selectedRobots = []) {
+function renderTaskUsageTrend(host, rows = [], selectedRobots = [], grain = taskTrendGrain()) {
   if (!host) return;
   host.replaceChildren();
   const scopedRows = rows.filter((row) => row.stat_hour && row.robot_code);
   if (!scopedRows.length) {
     const empty = document.createElement('div');
     empty.className = 'chart-empty';
-    empty.textContent = 'No hourly task evidence is available for the selected period.';
+    empty.textContent = `No task evidence is available in ${grain.bucketLabel} for the selected period.`;
     host.append(empty);
     return;
   }
@@ -182,7 +190,7 @@ function renderTaskUsageTrend(host, rows = [], selectedRobots = []) {
   const plotHeight = height - margin.top - margin.bottom;
   const x = (index) => margin.left + (index / Math.max(hourLabels.length - 1, 1)) * plotWidth;
   const y = (value) => margin.top + (1 - value / max) * plotHeight;
-  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'Hourly execution trend by robot, in minutes' });
+  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': `Execution trend by robot in ${grain.bucketLabel}, in minutes` });
   [0, .5, 1].forEach((ratio) => {
     const lineY = margin.top + ratio * plotHeight;
     svg.append(svgElement('line', { x1: margin.left, y1: lineY, x2: width - margin.right, y2: lineY, class: 'chart-grid-line' }));
@@ -231,7 +239,7 @@ function renderTaskUsageTrend(host, rows = [], selectedRobots = []) {
 }
 
 /*
-  Smooth cubic interpolation that remains monotone between adjacent hourly
+  Smooth cubic interpolation that remains monotone between adjacent time-bucket
   values. The curve passes through every observed point without inventing an
   overshoot between two zero-value hours.
 */
@@ -264,8 +272,8 @@ function buildMonotoneCurvePath(points = []) {
 }
 
 /*
-  Step-after path for hourly series. The value stays constant until the next
-  hour, so the chart never suggests data exists between two hourly samples.
+  Step-after path for time-bucket series. The value stays constant until the
+  next bucket, so the chart never suggests evidence between observations.
 */
 function buildStepPath(points = []) {
   if (!points.length) return '';
@@ -276,7 +284,7 @@ function buildStepPath(points = []) {
   return path;
 }
 
-function renderTaskIdleTrend(host, rows = []) {
+function renderTaskIdleTrend(host, rows = [], grain = taskTrendGrain()) {
   if (!host) return;
   host.replaceChildren();
   const byHour = new Map();
@@ -289,7 +297,7 @@ function renderTaskIdleTrend(host, rows = []) {
   if (!points.length) {
     const empty = document.createElement('div');
     empty.className = 'chart-empty';
-    empty.textContent = 'No hourly idle-time evidence is available for the selected period.';
+    empty.textContent = `No idle-time evidence is available in ${grain.bucketLabel} for the selected period.`;
     host.append(empty);
     return;
   }
@@ -301,7 +309,7 @@ function renderTaskIdleTrend(host, rows = []) {
   const step = plotWidth / Math.max(points.length, 1);
   const barWidth = Math.max(2, Math.min(18, step * .7));
   const y = (value) => margin.top + (1 - value / max) * plotHeight;
-  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'Hourly idle time, in minutes' });
+  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': `Idle time in ${grain.bucketLabel}, in minutes` });
   [0, .5, 1].forEach((ratio) => {
     const lineY = margin.top + ratio * plotHeight;
     svg.append(svgElement('line', { x1: margin.left, y1: lineY, x2: width - margin.right, y2: lineY, class: 'chart-grid-line' }));
@@ -437,9 +445,9 @@ function renderLegacyTaskAnalytics(data) {
     empty.textContent = 'No closed task-event evidence is available for an execution trend in this period.';
     elements.taskUsageChart.append(empty);
   } else {
-    renderTaskUsageTrend(elements.taskUsageChart, data.hourlyTrend || [], state.taskRobots);
+    renderTaskUsageTrend(elements.taskUsageChart, data.hourlyTrend || [], state.taskRobots, taskTrendGrain(data));
   }
-  renderTaskIdleTrend(elements.taskIdleTrendChart, data.hourlyTrend || []);
+  renderTaskIdleTrend(elements.taskIdleTrendChart, data.hourlyTrend || [], taskTrendGrain(data));
   renderTaskIdleCauses(summary);
   elements.taskCallingBoxTitle.textContent = `Top ${topLimit} Calling Boxes`;
   elements.taskAssignedTitle.textContent = `Top ${topLimit} Assigned Tasks`;
@@ -449,7 +457,7 @@ function renderLegacyTaskAnalytics(data) {
 }
 
 /*
-  Hourly series chart for Calling Box and assigned-task counts.
+  Adaptive time-bucket series chart for Calling Box and assigned-task counts.
   Deliberately mirrors renderTaskUsageTrend so the three Task Analytics trend
   charts read the same way; series come from the top-N labels bounded in SQL.
 */
@@ -463,7 +471,7 @@ function renderTaskLabelTrend(host, rows, options = {}) {
   if (!scopedRows.length) {
     const empty = document.createElement('div');
     empty.className = 'chart-empty';
-    empty.textContent = options.emptyText || 'No hourly evidence is available for the selected period.';
+    empty.textContent = options.emptyText || 'No time-bucket evidence is available for the selected period.';
     host.append(empty);
     return;
   }
@@ -506,7 +514,7 @@ function renderTaskLabelTrend(host, rows, options = {}) {
   const plotHeight = height - margin.top - margin.bottom;
   const x = (index) => margin.left + (index / Math.max(hourLabels.length - 1, 1)) * plotWidth;
   const y = (value) => margin.top + (1 - value / max) * plotHeight;
-  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': options.ariaLabel || 'Hourly trend' });
+  const svg = svgElement('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': options.ariaLabel || 'Time-bucket trend' });
 
   [0, 0.5, 1].forEach((ratio) => {
     const lineY = margin.top + ratio * plotHeight;
@@ -604,39 +612,41 @@ function renderTaskLabelTrend(host, rows, options = {}) {
 function renderTaskVolumeCharts(data) {
   const callingRows = data.callingBoxHourly || [];
   const assignedRows = data.assignedTaskHourly || [];
+  const grain = taskTrendGrain(data);
 
   if (elements.taskCallingBoxTrendSubtitle) {
     const labels = new Set(callingRows.map((row) => row.calling_box_label));
     elements.taskCallingBoxTrendSubtitle.textContent = labels.size
-      ? `Call count by hour · top ${labels.size} Calling Boxes in the selected period`
-      : 'Call count by hour. Series are the top Calling Boxes in the selected period.';
+      ? `Call count in ${grain.bucketLabel} · top ${labels.size} Calling Boxes in the selected period`
+      : `Call count in ${grain.bucketLabel}. Series are the top Calling Boxes in the selected period.`;
   }
   renderTaskLabelTrend(elements.taskCallingBoxTrendChart, callingRows, {
     labelKey: 'calling_box_label',
     valueKey: 'calling_box_count',
     unit: 'calls',
-    ariaLabel: 'Hourly Calling Box call count by label',
+    ariaLabel: `Calling Box call count by label in ${grain.bucketLabel}`,
     emptyText: 'No Calling Box records are available for the selected period and robot.'
   });
 
   if (elements.taskAssignedTrendSubtitle) {
     const labels = new Set(assignedRows.map((row) => row.task_label));
     elements.taskAssignedTrendSubtitle.textContent = labels.size
-      ? `Assignment count by hour · top ${labels.size} assigned tasks in the selected period`
-      : 'Assignment count by hour. Series are the top assigned tasks in the selected period.';
+      ? `Assignment count in ${grain.bucketLabel} · top ${labels.size} assigned tasks in the selected period`
+      : `Assignment count in ${grain.bucketLabel}. Series are the top assigned tasks in the selected period.`;
   }
   renderTaskLabelTrend(elements.taskAssignedTrendChart, assignedRows, {
     labelKey: 'task_label',
     valueKey: 'assigned_task_count',
     secondaryKey: 'completed_task_count',
     unit: 'assignments',
-    ariaLabel: 'Hourly assigned task count by label',
+    ariaLabel: `Assigned task count by label in ${grain.bucketLabel}`,
     emptyText: 'No assigned task records are available for the selected period and robot.'
   });
 }
 
 function renderTaskAnalytics(data) {
   const summary = data.summary || {};
+  const grain = taskTrendGrain(data);
   const topLimit = state.taskTopLimit;
   const executionSeconds = asNumber(summary.executing_seconds);
   const idleSeconds = asNumber(summary.no_task_seconds) + asNumber(summary.waiting_seconds) + asNumber(summary.charging_seconds);
@@ -678,9 +688,14 @@ function renderTaskAnalytics(data) {
   renderTaskStateExceptionDetails(data.stateExceptionDetails || [], dataGapRobotHours);
 
   const selectedRobotLabel = taskRobotSelectionLabel(data.robots || []);
-  elements.taskUsageSubtitle.textContent = `${selectedRobotLabel} / queues accepted ${formatNumber(summary.accepted_queue_count)} / task starts ${formatNumber(summary.task_started_count)} / subtask starts ${formatNumber(summary.subtask_started_count)} / completed ${formatNumber(summary.task_completed_count)}`;
-  renderTaskUsageTrend(elements.taskUsageChart, data.hourlyTrend || [], state.taskRobots);
-  renderTaskIdleTrend(elements.taskIdleTrendChart, data.hourlyTrend || []);
+  if (elements.taskUsageTitle) elements.taskUsageTitle.textContent = `Execution Trend by Robot · ${grain.label}`;
+  if (elements.taskIdleTrendTitle) elements.taskIdleTrendTitle.textContent = `Idle Time Trend · ${grain.label}`;
+  if (elements.taskIdleTrendSubtitle) elements.taskIdleTrendSubtitle.textContent = `Idle minutes in ${grain.bucketLabel}. Charging takes precedence over waiting.`;
+  if (elements.taskCallingBoxTrendTitle) elements.taskCallingBoxTrendTitle.textContent = `Calling Box Trend by ${grain.label}`;
+  if (elements.taskAssignedTrendTitle) elements.taskAssignedTrendTitle.textContent = `Assigned Task Trend by ${grain.label}`;
+  elements.taskUsageSubtitle.textContent = `${selectedRobotLabel} · ${grain.bucketLabel} · queues accepted ${formatNumber(summary.accepted_queue_count)} / task starts ${formatNumber(summary.task_started_count)} / subtask starts ${formatNumber(summary.subtask_started_count)} / completed ${formatNumber(summary.task_completed_count)}`;
+  renderTaskUsageTrend(elements.taskUsageChart, data.hourlyTrend || [], state.taskRobots, grain);
+  renderTaskIdleTrend(elements.taskIdleTrendChart, data.hourlyTrend || [], grain);
   renderTaskIdleCauses(summary);
 
   elements.taskCallingBoxTitle.textContent = `Top ${topLimit} Calling Boxes`;

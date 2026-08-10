@@ -16,11 +16,14 @@ const wifiRunningAnalysisQueryPath = path.join(__dirname, 'wifi-running-analysis
 const wifiRunningAnalysisQuery = fs.readFileSync(wifiRunningAnalysisQueryPath, 'utf8');
 const taskAnalyticsQueryPath = path.join(__dirname, 'task-analytics-query.sql');
 const taskAnalyticsQuery = fs.readFileSync(taskAnalyticsQueryPath, 'utf8');
+const taskTrendQueryPath = path.join(__dirname, 'task-trend-query.sql');
+const taskTrendQuery = fs.readFileSync(taskTrendQueryPath, 'utf8');
 const projectAnalyticsQueryPath = path.join(__dirname, 'project-analytics-query.sql');
 const projectAnalyticsQuery = fs.readFileSync(projectAnalyticsQueryPath, 'utf8');
 const { buildAnalysis } = require('./analysis-engine');
 const { buildWifiMinimumDiagnostics } = require('./wifi-minimum-diagnostic');
 const { buildWifiWeakSignalDiagnostics } = require('./wifi-weak-signal-diagnostic');
+const { describeTrendGrain } = require('./trend-grain');
 
 function normalizeWindow(hours, days) {
   return {
@@ -202,6 +205,7 @@ async function loadDashboard({ hours, days, robotType, wifiStart, wifiEnd } = {}
   const routeSegmentRows = analysisSets[6] || [];
   const eventAuditCoverageRows = analysisSets[7] || [];
   const wifiRunningSummary = wifiRunningSets[0]?.[0] || {};
+  const wifiTrendGrain = describeTrendGrain(wifiRunningSummary.bucket_minutes || 15);
   const wifiRunningTrend = wifiRunningSets[1] || [];
   const wifiRunningByTarget = wifiRunningSets[2] || [];
   const wifiRunningByRobot = wifiRunningSets[3] || [];
@@ -255,6 +259,7 @@ async function loadDashboard({ hours, days, robotType, wifiStart, wifiEnd } = {}
     wifiRunningAnalysis: {
       window: wifiAnalysisWindow,
       summary: wifiRunningSummary,
+      trendGrain: wifiTrendGrain,
       trend: wifiRunningTrend,
       byTarget: wifiRunningByTarget,
       byRobot: wifiRunningByRobot,
@@ -281,34 +286,50 @@ async function loadTaskAnalytics({ taskStart, taskEnd, robotCodes } = {}) {
   const pool = await getPool();
   const request = pool.request();
   request.multiple = true;
-  request.input('task_analysis_start', sql.NVarChar(23), String(taskStart || '').trim() || null);
-  request.input('task_analysis_end', sql.NVarChar(23), String(taskEnd || '').trim() || null);
+  const trendRequest = pool.request();
+  trendRequest.multiple = true;
+  const normalizedTaskStart = String(taskStart || '').trim() || null;
+  const normalizedTaskEnd = String(taskEnd || '').trim() || null;
+  request.input('task_analysis_start', sql.NVarChar(23), normalizedTaskStart);
+  request.input('task_analysis_end', sql.NVarChar(23), normalizedTaskEnd);
   const normalizedRobotCodes = Array.isArray(robotCodes)
     ? robotCodes.map((code) => String(code || '').trim()).filter(Boolean).join(',')
     : String(robotCodes || '').trim();
   request.input('robot_codes', sql.NVarChar(sql.MAX), normalizedRobotCodes || null);
+  trendRequest.input('task_analysis_start', sql.NVarChar(23), normalizedTaskStart);
+  trendRequest.input('task_analysis_end', sql.NVarChar(23), normalizedTaskEnd);
+  trendRequest.input('robot_codes', sql.NVarChar(sql.MAX), normalizedRobotCodes || null);
 
-  const result = await request.query(taskAnalyticsQuery);
+  const [result, trendResult] = await Promise.all([
+    request.query(taskAnalyticsQuery),
+    trendRequest.query(taskTrendQuery)
+  ]);
   const sets = result.recordsets || [];
+  const trendSets = trendResult.recordsets || [];
   const summary = sets[0]?.[0] || {};
+  const trendSummary = trendSets[0]?.[0] || {};
+  const trendGrain = describeTrendGrain(trendSummary.bucket_minutes || 15);
 
   return {
     generatedAt: new Date().toISOString(),
-    dataSource: 'DWS task, battery, Calling Box, and assigned-task hourly aggregates',
+    dataSource: 'DWS KPI aggregates plus DWD interval and queue-event trends',
     metricAvailability: {
       utilizationRate: 'AVAILABLE: execution / (execution + waiting + charging + no task); data-unavailable time is excluded.',
       idleTime: 'AVAILABLE: no task, waiting, and charging time from DWS task-hourly evidence.',
+      trend: 'AVAILABLE: 5/15-minute trends are reconstructed from DWD task, battery and queue intervals; hour/day trends aggregate complete DWS hours.',
       leaderboard: 'AVAILABLE: all Calling Box-linked and assigned queue records in DWS hourly aggregates.',
       stateDataException: 'AVAILABLE: a robot-hour is exceptional when no execution, charging, waiting, or no-task evidence is available; detail is bounded to the latest 100 affected hours.'
     },
     summary,
+    trendSummary,
+    trendGrain,
     robots: sets[1] || [],
-    hourlyTrend: sets[2] || [],
+    hourlyTrend: trendSets[1] || [],
     callingBoxes: sets[3] || [],
     assignedTasks: sets[4] || [],
     stateExceptionDetails: sets[5] || [],
-    callingBoxHourly: sets[6] || [],
-    assignedTaskHourly: sets[7] || []
+    callingBoxHourly: trendSets[2] || [],
+    assignedTaskHourly: trendSets[3] || []
   };
 }
 
@@ -346,6 +367,7 @@ async function loadProjectAnalytics({ start, end, projectId, jobId, projectIds, 
 
   const result = await request.query(projectAnalyticsQuery);
   const sets = result.recordsets || [];
+  const summary = sets[0]?.[0] || {};
 
   return {
     generatedAt: new Date().toISOString(),
@@ -361,7 +383,8 @@ async function loadProjectAnalytics({ start, end, projectId, jobId, projectIds, 
       queueOutcome: 'AVAILABLE: DWD.fact_amr_queue.queue_status records the outcome only; the source has no root-cause field.',
       openQueues: 'AVAILABLE: in_progress and pending queue records within the window.'
     },
-    summary: sets[0]?.[0] || {},
+    summary,
+    trendGrain: describeTrendGrain(summary.bucket_minutes || 15),
     projects: sets[1] || [],
     tasks: sets[2] || [],
     robots: sets[3] || [],

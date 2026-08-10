@@ -1275,6 +1275,10 @@ function syncWifiLegacySelection(values, availableCount) {
 function renderRunningWifiAnalysis(payload) {
   if (!elements.runningWifiTrendChart || !elements.wifiPoiToggle || !elements.wifiRobotToggle) return;
   const summary = payload.summary || {};
+  const trendGrain = payload.trendGrain || {
+    label: `${formatNumber(summary.bucket_minutes || 15)} Minutes`,
+    bucketLabel: `${formatNumber(summary.bucket_minutes || 15)}-minute buckets`
+  };
   const byRobot = payload.byRobot || [];
   const robotTargets = payload.byRobotTarget || [];
   const actualAnalysisHours = asNumber(summary.analysis_window_hours);
@@ -1400,7 +1404,9 @@ function renderRunningWifiAnalysis(payload) {
       ? state.selectedWifiPois[0]
       : `${state.selectedWifiPois.length} targets`;
   const scopeLabel = [robotScopeLabel, poiScopeLabel].join(' · ');
-  elements.runningWifiChartSubtitle.textContent = `${scopeLabel} · ${formatNumber(summary.analysis_window_hours)} hours · ${formatNumber(summary.bucket_minutes)}-minute buckets · averages exclude zero-signal samples`;
+  if (elements.runningWifiTrendTitle) elements.runningWifiTrendTitle.textContent = `RSSI Trend by ${trendGrain.label} During Running Tasks`;
+  if (elements.weakSignalTimelineTitle) elements.weakSignalTimelineTitle.textContent = `Weak-Signal Time Distribution by ${trendGrain.label}`;
+  elements.runningWifiChartSubtitle.textContent = `${scopeLabel} · ${formatNumber(summary.analysis_window_hours)} hours · ${trendGrain.bucketLabel} · averages exclude zero-signal samples`;
 
   const trend = aggregateRunningWifiTrendMulti(
     payload.trend || [],

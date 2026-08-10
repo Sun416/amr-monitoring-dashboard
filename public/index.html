@@ -79,7 +79,7 @@
         <div class="header-controls">
           <div class="clock-block"><span id="currentDate">--</span><strong id="currentTime">--:--:--</strong></div>
           <div class="header-wifi-window" aria-label="Exact analysis time range">
-            <div class="header-wifi-window-copy"><span>Exact Analysis Period</span><small>Database local time · WiFi exact; Task uses complete hours</small></div>
+            <div class="header-wifi-window-copy"><span>Exact Analysis Period</span><small>Database local time · WiFi and trends exact; Task KPIs use complete hours</small></div>
             <label><span>Start</span><input id="wifiStartTime" type="datetime-local" step="1" aria-label="Exact analysis start time"></label>
             <label><span>End</span><input id="wifiEndTime" type="datetime-local" step="1" aria-label="Exact analysis end time"></label>
             <button id="wifiApplyWindow" class="button secondary compact-button" type="button">Apply</button>
@@ -167,7 +167,7 @@
                 <header class="panel-header">
                   <div>
                     <span class="panel-kicker">SIGNAL TREND</span>
-                    <h3>RSSI Trend During Running Tasks</h3>
+                    <h3 id="runningWifiTrendTitle">RSSI Trend by 15 Minutes During Running Tasks</h3>
                     <p id="runningWifiChartSubtitle">Average and minimum values; zero-signal records are shown separately as unusable samples.</p>
                   </div>
                   <div class="wifi-chart-filters">
@@ -217,7 +217,7 @@
                 <header class="panel-header">
                   <div>
                     <span class="panel-kicker">WEAK-SIGNAL TIMING</span>
-                    <h3>Weak-Signal Time Distribution</h3>
+                    <h3 id="weakSignalTimelineTitle">Weak-Signal Time Distribution by 15 Minutes</h3>
                     <p id="weakSignalTimelineSubtitle">X-axis is time. Y-axis is the number of strict Running-task WiFi samples with RSSI ≤ -67 dBm.</p>
                   </div>
                 </header>
@@ -272,7 +272,7 @@
 
           <div class="project-dashboard-grid">
             <article class="panel chart-panel project-trend-panel">
-              <header class="panel-header"><div><span class="panel-kicker">TREND</span><h3>Task Records by Hour</h3></div></header>
+              <header class="panel-header"><div><span class="panel-kicker">TREND</span><h3 id="projectTrendTitle">Task Records by 15 Minutes</h3></div></header>
               <div id="projectTrendChart" class="chart-host"></div>
             </article>
             <article class="panel chart-panel project-outcome-panel">
@@ -346,9 +346,9 @@
           <article class="task-data-scope" id="taskDataScope" data-tone="neutral">Loading Task Analytics DWS data…</article>
           <div class="focus-strip task-summary-strip task-kpi-strip"><div><span>Utilization Rate</span><strong id="taskUtilizationValue">--</strong><small id="taskUtilizationDetail">Execution / known state time</small></div><div><span>Execution Time</span><strong id="taskExecutionValue">--</strong><small id="taskExecutionDetail">Closed task intervals only</small></div><div><span>Idle Time</span><strong id="taskIdleValue">--</strong><small id="taskIdleDetail">No task + waiting + charging</small></div><div><span>State Data Exception</span><strong id="taskDataExceptionValue">--</strong><small id="taskDataExceptionDetail">Missing state evidence</small></div></div>
           <details id="taskStateExceptionPanel" class="task-state-exception-panel" hidden><summary><span>State data exception details</span><small id="taskStateExceptionSummary">Latest affected robot-hours</small></summary><div class="table-scroll"><table class="task-state-exception-table"><thead><tr><th>Robot</th><th>Hour</th><th>Coverage finding</th><th>Battery / task evidence</th><th>Last battery event before hour</th></tr></thead><tbody id="taskStateExceptionBody"><tr><td colspan="5" class="empty-cell">Waiting for DWS state-exception data</td></tr></tbody></table></div></details>
-          <article class="panel chart-panel task-usage-panel"><header class="panel-header"><div><span class="panel-kicker">HOURLY USAGE</span><h3>Execution Trend by Robot</h3><p id="taskUsageSubtitle">Task evidence is grouped by hour and selected robot.</p></div></header><div id="taskUsageChart" class="chart-host"></div></article>
-          <div class="two-column-grid task-analysis-grid"><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">IDLE TIME</span><h3>Hourly Idle Time Trend</h3><p>Idle minutes by hour. Charging takes precedence over waiting.</p></div></header><div id="taskIdleTrendChart" class="chart-host"></div></article><article class="panel"><header class="panel-header"><div><span class="panel-kicker">IDLE TIME</span><h3>Idle Time Causes</h3><p>No task, waiting, and charging share of observed idle time.</p></div></header><div id="taskIdleCauseChart" class="task-idle-cause-chart empty-state">Waiting for DWS task data</div></article></div>
-          <div class="two-column-grid task-analysis-grid"><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">CALLING BOX</span><h3>Calling Box Trend by Hour</h3><p id="taskCallingBoxTrendSubtitle">Call count by hour. Series are the top Calling Boxes in the selected period.</p></div></header><div id="taskCallingBoxTrendChart" class="chart-host"></div></article><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">ASSIGNED TASKS</span><h3>Assigned Task Trend by Hour</h3><p id="taskAssignedTrendSubtitle">Assignment count by hour. Series are the top assigned tasks in the selected period.</p></div></header><div id="taskAssignedTrendChart" class="chart-host"></div></article></div>
+          <article class="panel chart-panel task-usage-panel"><header class="panel-header"><div><span class="panel-kicker">ADAPTIVE USAGE</span><h3 id="taskUsageTitle">Execution Trend by Robot · 15 Minutes</h3><p id="taskUsageSubtitle">Task evidence is grouped into adaptive time buckets and selected robot.</p></div></header><div id="taskUsageChart" class="chart-host"></div></article>
+          <div class="two-column-grid task-analysis-grid"><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">IDLE TIME</span><h3 id="taskIdleTrendTitle">Idle Time Trend · 15 Minutes</h3><p id="taskIdleTrendSubtitle">Idle minutes by adaptive time bucket. Charging takes precedence over waiting.</p></div></header><div id="taskIdleTrendChart" class="chart-host"></div></article><article class="panel"><header class="panel-header"><div><span class="panel-kicker">IDLE TIME</span><h3>Idle Time Causes</h3><p>No task, waiting, and charging share of observed idle time.</p></div></header><div id="taskIdleCauseChart" class="task-idle-cause-chart empty-state">Waiting for DWS task data</div></article></div>
+          <div class="two-column-grid task-analysis-grid"><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">CALLING BOX</span><h3 id="taskCallingBoxTrendTitle">Calling Box Trend by 15 Minutes</h3><p id="taskCallingBoxTrendSubtitle">Call count by adaptive time bucket. Series are the top Calling Boxes in the selected period.</p></div></header><div id="taskCallingBoxTrendChart" class="chart-host"></div></article><article class="panel chart-panel"><header class="panel-header"><div><span class="panel-kicker">ASSIGNED TASKS</span><h3 id="taskAssignedTrendTitle">Assigned Task Trend by 15 Minutes</h3><p id="taskAssignedTrendSubtitle">Assignment count by adaptive time bucket. Series are the top assigned tasks in the selected period.</p></div></header><div id="taskAssignedTrendChart" class="chart-host"></div></article></div>
           <div class="two-column-grid task-analysis-grid task-ranking-grid"><article class="panel"><header class="panel-header"><div><span class="panel-kicker">CALLING BOX</span><h3 id="taskCallingBoxTitle">Top 5 Calling Boxes</h3><p>All Calling Box-linked queues in complete DWS hours within the selected period.</p></div></header><div id="taskCallingBoxList" class="task-ranking-list empty-state">Waiting for Calling Box data</div></article><article class="panel"><header class="panel-header"><div><span class="panel-kicker">ASSIGNED TASKS</span><h3 id="taskAssignedTitle">Top 5 Assigned Tasks</h3><p>Assignment count in complete DWS hours; completed count shown for context.</p></div></header><div id="taskAssignedList" class="task-ranking-list empty-state">Waiting for assigned task data</div></article></div>
           <div class="legacy-task-layout">
           <div class="focus-strip four-column"><div><span>Task Success Rate</span><strong id="taskSuccessValue">--</strong><small>Completed / (completed + unsuccessful)</small></div><div><span>Recorded Failures</span><strong id="taskFailureValue">--</strong><small id="taskFailureSummary">Queue outcome status</small></div><div><span>Active Jobs</span><strong id="taskActiveValue">--</strong><small id="taskActiveIds">IDs: --</small></div><div><span>Root-Cause Field</span><strong class="compact-value">Not Available</strong><small>The source records outcome status only</small></div></div>

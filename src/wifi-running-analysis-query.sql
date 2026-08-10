@@ -30,21 +30,7 @@ DECLARE
         WHEN @wifi_analysis_start IS NOT NULL AND @wifi_analysis_end IS NOT NULL THEN CONVERT(BIT, 1)
         ELSE CONVERT(BIT, 0)
     END,
-    @weak_rssi_threshold INT = -67,
-    @weak_time_bucket_minutes INT;
-
-SET @bucket_minutes = CASE
-    WHEN @analysis_hours <= 12 THEN 5
-    WHEN @analysis_hours <= 24 THEN 10
-    WHEN @analysis_hours <= 168 THEN 60
-    ELSE 240
-END;
-
-SET @weak_time_bucket_minutes = CASE
-    WHEN @analysis_hours <= 24 THEN 60
-    WHEN @analysis_hours <= 168 THEN 240
-    ELSE 1440
-END;
+    @weak_rssi_threshold INT = -67;
 
 SELECT
     master_robot.[id] AS [master_robot_id],
@@ -95,6 +81,14 @@ ELSE
 BEGIN
     SET @analysis_start = DATEADD(HOUR, -@analysis_hours, @analysis_anchor);
     SET @analysis_end = DATEADD(MILLISECOND, 1, @analysis_anchor);
+END;
+
+/* One shared time grain for the RSSI and weak-signal timelines. */
+SET @bucket_minutes = CASE
+    WHEN DATEDIFF_BIG(SECOND, @analysis_start, @analysis_end) <= 21600 THEN 5
+    WHEN DATEDIFF_BIG(SECOND, @analysis_start, @analysis_end) <= 86400 THEN 15
+    WHEN DATEDIFF_BIG(SECOND, @analysis_start, @analysis_end) <= 604800 THEN 60
+    ELSE 1440
 END;
 
 ;WITH ranked_running_job AS (
@@ -522,16 +516,15 @@ ORDER BY
     minimum_scope.[scope_poi_target];
 
 /*
-    Weak-signal occurrence timeline. The bucket expands as the selected time
-    window grows so the chart stays readable: hourly (<=24h), 4-hour (<=7d),
-    then daily. Every returned row remains traceable to a robot and task target.
+    Weak-signal occurrence timeline. It uses the same adaptive bucket as the
+    main RSSI trend so the two charts describe the selected window consistently.
 */
 SELECT
     running_sample.[robot_code],
     running_sample.[poi_target],
     DATEADD(
         MINUTE,
-        (DATEDIFF(MINUTE, CONVERT(DATETIME2(0), '20000101'), running_sample.[pc_timestamp]) / @weak_time_bucket_minutes) * @weak_time_bucket_minutes,
+        (DATEDIFF(MINUTE, CONVERT(DATETIME2(0), '20000101'), running_sample.[pc_timestamp]) / @bucket_minutes) * @bucket_minutes,
         CONVERT(DATETIME2(0), '20000101')
     ) AS [bucket_start],
     COUNT_BIG(*) AS [weak_signal_sample_count],
@@ -547,7 +540,7 @@ GROUP BY
     running_sample.[poi_target],
     DATEADD(
         MINUTE,
-        (DATEDIFF(MINUTE, CONVERT(DATETIME2(0), '20000101'), running_sample.[pc_timestamp]) / @weak_time_bucket_minutes) * @weak_time_bucket_minutes,
+        (DATEDIFF(MINUTE, CONVERT(DATETIME2(0), '20000101'), running_sample.[pc_timestamp]) / @bucket_minutes) * @bucket_minutes,
         CONVERT(DATETIME2(0), '20000101')
     )
 ORDER BY

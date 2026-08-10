@@ -4,7 +4,8 @@
 
 ## 当前功能
 
-- Project & Task 页采用严格的两级业务查询：先按项目、再按任务筛选，后端只接收 `projects/jobs`。机器人列表由当前项目/任务的队列记录派生；页面保留 Robot 展示筛选，用于收窄 KPI、机器人图、小时趋势、空闲时间图和最近明细，但不会反向改变项目/任务范围或作为后端查询条件。
+- Project & Task 页采用严格的两级业务查询：先按项目、再按任务筛选，后端只接收 `projects/jobs`。机器人列表由当前项目/任务的队列记录派生；页面保留 Robot 展示筛选，用于收窄 KPI、机器人图、自适应趋势、空闲时间图和最近明细，但不会反向改变项目/任务范围或作为后端查询条件。
+- Project、Task Analytics 与 Running-Task WiFi 的时间趋势统一按窗口自动选粒度：`≤6h = 5 分钟`、`6–24h = 15 分钟`、`1–7d = 1 小时`、`>7d = 1 天`。Task KPI 和状态异常仍使用完整小时 DWS；分钟级 Task 趋势从 DWD 任务区间、队列和电池证据重新计算，不能把小时值平均摊到分钟桶。
 - 分析中心使用版本化的透明规则，输出“现象、最可能原因、证据、置信度、维护动作、备选原因”。
 - 断连分析分别比较状态、WiFi、电池和设备错误的独立时间戳，避免用一条新数据掩盖另一条数据源已过期。
 - 任务负载按 AMR / AMB 类型分别比较，识别任务集中、零任务机器人及下一步需要检查的调度证据。
@@ -118,7 +119,7 @@ npm.cmd start
 
 - `GET /api/health`：检查数据库和非快照 DWS 小时汇总表。
 - `GET /api/dashboard?hours=24&days=7&robotType=ALL`：读取监控数据及透明规则分析结果。
-- `GET /api/project-analytics?projects=20&jobs=391`：按项目/任务读取汇总、任务、派生机器人、小时趋势、队列证据和逐机器人空闲时间；传入 `robots` 会返回 `400 ROBOT_SCOPE_NOT_SUPPORTED`。
+- `GET /api/project-analytics?projects=20&jobs=391`：按项目/任务读取汇总、任务、派生机器人、自适应趋势、队列证据和逐机器人空闲时间；传入 `robots` 会返回 `400 ROBOT_SCOPE_NOT_SUPPORTED`。
 - `POST /api/sync/current`：已停用，固定返回 `410 SNAPSHOT_SYNC_DISABLED`，防止旧快照重新进入当前状态链路。
 - `POST /api/sync/dws`：已外部化，固定返回 `410 DWS_SYNC_EXTERNALIZED`；数据库刷新由独立的 `amr-data-warehouse` 运维流程负责。
 

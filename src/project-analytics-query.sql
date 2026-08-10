@@ -11,7 +11,7 @@
     1  project list (entry point of the whole view)
     2  task list within the selected project scope
     3  robot breakdown within the selected project/task scope
-    4  hourly queue trend within the selected scope
+    4  adaptive queue trend within the selected scope
     5  outcome breakdown (queue_status) within the selected scope
     6  recent queue records for evidence
     7  idle-time causes by derived robot for local display filtering
@@ -21,6 +21,8 @@ SET NOCOUNT ON;
 DECLARE @requested_start DATETIME2(0) = TRY_CONVERT(DATETIME2(0), REPLACE(@analysis_start_text, N'T', N' '));
 DECLARE @requested_end DATETIME2(0) = TRY_CONVERT(DATETIME2(0), REPLACE(@analysis_end_text, N'T', N' '));
 DECLARE @anchor DATETIME2(0);
+DECLARE @bucket_minutes INT;
+DECLARE @bucket_epoch DATETIME2(0) = CONVERT(DATETIME2(0), '20000101');
 DECLARE @project_ids_text NVARCHAR(MAX) = NULLIF(LTRIM(RTRIM(@project_ids_text_param)), N'');
 DECLARE @job_ids_text NVARCHAR(MAX) = NULLIF(LTRIM(RTRIM(@job_ids_text_param)), N'');
 
@@ -77,6 +79,13 @@ BEGIN
     THROW 51102, N'Project Analytics supports an analysis window of at most 90 days.', 1;
 END;
 
+SET @bucket_minutes = CASE
+    WHEN DATEDIFF_BIG(SECOND, @requested_start, @requested_end) <= 21600 THEN 5
+    WHEN DATEDIFF_BIG(SECOND, @requested_start, @requested_end) <= 86400 THEN 15
+    WHEN DATEDIFF_BIG(SECOND, @requested_start, @requested_end) <= 604800 THEN 60
+    ELSE 1440
+END;
+
 /*
   Execution seconds come from ODS.TA_AMR, the only source that records a closed
   start_time/end_time pair per subjob run. DWD.fact_amr_queue.duration_seconds
@@ -123,7 +132,7 @@ DECLARE @scoped_queue TABLE
     queue_fact_id BIGINT NOT NULL PRIMARY KEY,
     queue_id NVARCHAR(100) NULL,
     event_time DATETIME2(0) NOT NULL,
-    stat_hour DATETIME2(0) NOT NULL,
+    bucket_start DATETIME2(0) NOT NULL,
     project_id INT NULL,
     project_name NVARCHAR(200) NULL,
     job_id INT NULL,
@@ -142,7 +151,7 @@ INSERT INTO @scoped_queue
     queue_fact_id,
     queue_id,
     event_time,
-    stat_hour,
+    bucket_start,
     project_id,
     project_name,
     job_id,
@@ -159,7 +168,11 @@ SELECT
     queue_fact.[queue_fact_id],
     queue_fact.[queue_id],
     CONVERT(DATETIME2(0), queue_fact.[event_time]),
-    DATEADD(HOUR, DATEDIFF(HOUR, 0, queue_fact.[event_time]), 0),
+    DATEADD(
+        MINUTE,
+        (DATEDIFF(MINUTE, @bucket_epoch, queue_fact.[event_time]) / @bucket_minutes) * @bucket_minutes,
+        @bucket_epoch
+    ),
     TRY_CONVERT(INT, queue_fact.[project_id]),
     project_master.[name],
     TRY_CONVERT(INT, queue_fact.[job_id]),
@@ -188,6 +201,7 @@ SELECT
     CONVERT(NVARCHAR(19), @requested_start, 120) AS [analysis_start],
     CONVERT(NVARCHAR(19), @requested_end, 120) AS [analysis_end],
     CONVERT(NVARCHAR(19), @anchor, 120) AS [source_anchor],
+    @bucket_minutes AS [bucket_minutes],
     (SELECT COUNT(1) FROM @selected_projects) AS [selected_project_count],
     (SELECT COUNT(1) FROM @selected_jobs) AS [selected_job_count],
     COUNT_BIG(1) AS [queue_count],
@@ -285,9 +299,9 @@ AND
 GROUP BY scoped.[robot_master_id], scoped.[robot_name]
 ORDER BY [queue_count] DESC, [robot_name];
 
-/* 4: hourly trend for the selected scope, split by robot. */
+/* 4: adaptive trend for the selected scope, split by robot. */
 SELECT
-    CONVERT(NVARCHAR(19), scoped.[stat_hour], 120) AS [stat_hour],
+    CONVERT(NVARCHAR(19), scoped.[bucket_start], 120) AS [stat_hour],
     ISNULL(scoped.[robot_name], N'Unmapped robot') AS [robot_name],
     COUNT_BIG(1) AS [queue_count],
     SUM(CASE WHEN scoped.[queue_status] = N'completed' THEN 1 ELSE 0 END) AS [completed_count],
@@ -304,7 +318,7 @@ AND
     NOT EXISTS (SELECT 1 FROM @selected_jobs)
     OR EXISTS (SELECT 1 FROM @selected_jobs AS selected_job WHERE selected_job.[job_id] = scoped.[job_id])
 )
-GROUP BY scoped.[stat_hour], scoped.[robot_name]
+GROUP BY scoped.[bucket_start], scoped.[robot_name]
 ORDER BY [stat_hour], [robot_name];
 
 /* 5: recorded outcome breakdown for the selected scope. */
